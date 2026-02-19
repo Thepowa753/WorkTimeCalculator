@@ -169,6 +169,17 @@ function attachEventListeners() {
         
         // For time inputs, also listen to input event for real-time placeholder update
         input.addEventListener('input', () => {
+            // Auto-advance: move focus to next enabled input after 2 digits are entered
+            if (input.value.toString().length >= 2) {
+                const allInputs = Array.from(document.querySelectorAll('#workTableBody input[type="number"]:not(:disabled)'));
+                const currentIdx = allInputs.indexOf(input);
+                if (currentIdx >= 0 && currentIdx < allInputs.length - 1) {
+                    allInputs[currentIdx + 1].focus();
+                    allInputs[currentIdx + 1].select();
+                }
+            }
+
+            saveToStorage();
             const index = parseInt(input.dataset.index);
             if (!isNaN(index)) {
                 updateExit2Placeholder(index);
@@ -533,25 +544,32 @@ function applyThreshold(minutes) {
 function updateExit2Placeholder(index) {
     const data = getStoredData();
     const dayData = data[index] || {};
-    const exit2Input = document.querySelector(`.exit2[data-index="${index}"]`);
+    const exit2HourInput = document.querySelector(`.exit2-hour[data-index="${index}"]`);
+    const exit2MinuteInput = document.querySelector(`.exit2-minute[data-index="${index}"]`);
     const exit2Tooltip = document.querySelector(`.exit2-tooltip[data-index="${index}"]`);
     
     // Guard against missing elements during initialization or when elements are being updated
-    if (!exit2Input || !exit2Tooltip) return;
+    if (!exit2HourInput || !exit2MinuteInput || !exit2Tooltip) return;
     
-    // Only suggest if entry1, exit1, entry2 are filled but exit2 is not
-    if (dayData.entry1 && dayData.exit1 && dayData.entry2 && !dayData.exit2) {
+    // Only suggest if entry1, exit1, entry2 are filled but exit2 is not (and user hasn't started typing exit2)
+    const exit2BeingEdited = exit2HourInput.value || exit2MinuteInput.value;
+    if (dayData.entry1 && dayData.exit1 && dayData.entry2 && !dayData.exit2 && !exit2BeingEdited) {
         const suggestedTime = calculateSuggestedExit2(index);
         if (suggestedTime) {
-            exit2Input.placeholder = suggestedTime;
+            const [sugHour, sugMinute] = suggestedTime.split(':');
+            exit2HourInput.placeholder = sugHour;
+            exit2MinuteInput.placeholder = sugMinute;
             exit2Tooltip.textContent = `💡 ${suggestedTime}`;
             exit2Tooltip.classList.add('visible');
         } else {
+            exit2HourInput.placeholder = '00';
+            exit2MinuteInput.placeholder = '00';
             exit2Tooltip.textContent = '';
             exit2Tooltip.classList.remove('visible');
         }
     } else {
-        exit2Input.placeholder = '';
+        exit2HourInput.placeholder = '00';
+        exit2MinuteInput.placeholder = '00';
         exit2Tooltip.textContent = '';
         exit2Tooltip.classList.remove('visible');
     }
