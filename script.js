@@ -204,15 +204,15 @@ function capTime(time, minTime, maxTime, isEntry) {
     const [maxHour, maxMin] = maxTime.split(':').map(Number);
     const maxTotalMin = maxHour * 60 + maxMin;
     
-    // For entry times, use max of actual and minimum
+    // For entry times, use max of actual and minimum (early entries count from min time)
     if (isEntry) {
         if (totalMin < minTotalMin) return minTime;
-        if (totalMin > maxTotalMin) return maxTime;
+        // Entry times after max time are not capped - they're just after work hours
         return time;
     } else {
-        // For exit times, use min of actual and maximum
+        // For exit times, use min of actual and maximum (late exits count only until max time)
         if (totalMin > maxTotalMin) return maxTime;
-        if (totalMin < minTotalMin) return minTime;
+        // Exit times before min time are not capped - they're just before work hours
         return time;
     }
 }
@@ -276,7 +276,7 @@ function calculateSuggestedExit2(index) {
     }
     
     // We want to reach 0 difference ideally, so calculate needed minutes
-    // Standard hours - first slot + permit (now adds to work) + lunch adjustment + accumulated deficit
+    // Standard hours - first slot + lunch deduction adjustment - permit (which adds to worked time)
     let neededMinutes = STANDARD_HOURS - firstSlotMinutes + lunchAdjustment - permit;
     
     // If we have a deficit from previous days, we might want to work more
