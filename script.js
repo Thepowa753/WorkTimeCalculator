@@ -926,6 +926,9 @@ function applyDefaultToDay(index) {
     const defaultData = getDefaultDayData();
     const data = getStoredData();
     
+    // Preserve existing permit value before replacing data[index]
+    const existingPermit = data[index]?.permit || 0;
+    
     // Apply default to the specific day
     data[index] = {
         smartworking: false, // Always false when auto-filling
@@ -933,22 +936,22 @@ function applyDefaultToDay(index) {
         exit1: defaultData.exit1 || '',
         entry2: defaultData.entry2 || '',
         exit2: defaultData.exit2 || '',
-        permit: data[index]?.permit || 0 // Preserve existing permit value
+        permit: existingPermit // Preserve existing permit value
     };
     
     saveData(data);
     
-    // Update the UI for this specific day using a helper
-    const updateField = (field) => {
+    // Update the UI for this specific day
+    const updateTimeField = (field) => {
         const hourClass = `${field}-hour`;
         const minuteClass = `${field}-minute`;
         setTimeValue(hourClass, minuteClass, index, data[index][field] || '');
     };
     
-    updateField('entry1');
-    updateField('exit1');
-    updateField('entry2');
-    updateField('exit2');
+    updateTimeField('entry1');
+    updateTimeField('exit1');
+    updateTimeField('entry2');
+    updateTimeField('exit2');
     
     // Uncheck smartworking
     const swCheckbox = document.querySelector(`.smartworking-check[data-index="${index}"]`);
