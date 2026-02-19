@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Work Time Calculator",
+  "version": "1.0",
+  "description": "Calcola le tue ore di lavoro con soglia di 5 minuti",
+  "icons": {
+    "48": "docs/icon.png",
+    "128": "docs/icon.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "docs/icon.png",
+    "default_title": "Work Time Calculator"
+  }
+}

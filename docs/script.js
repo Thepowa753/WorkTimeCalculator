@@ -191,6 +191,7 @@ function attachEventListeners() {
             if (!isNaN(index)) {
                 updateExit2Placeholder(index);
                 validateLunchBreak(index);
+                validateTimeOrder(index);
             }
         });
     });
@@ -334,6 +335,25 @@ function clearLunchBreakWarning(index) {
     if (warningRow) {
         warningRow.remove();
     }
+}
+
+// Validate time order (each time must be >= previous: exit1 >= entry1, entry2 >= exit1, exit2 >= entry2)
+function validateTimeOrder(index) {
+    const entry1 = getTimeValue('entry1-hour', 'entry1-minute', index);
+    const exit1 = getTimeValue('exit1-hour', 'exit1-minute', index);
+    const entry2 = getTimeValue('entry2-hour', 'entry2-minute', index);
+    const exit2 = getTimeValue('exit2-hour', 'exit2-minute', index);
+
+    const markInvalid = (field, invalid) => {
+        const hourEl = document.querySelector(`.${field}-hour[data-index="${index}"]`);
+        const minuteEl = document.querySelector(`.${field}-minute[data-index="${index}"]`);
+        if (hourEl) hourEl.classList.toggle('invalid-time', invalid);
+        if (minuteEl) minuteEl.classList.toggle('invalid-time', invalid);
+    };
+
+    markInvalid('exit1', !!(entry1 && exit1 && exit1 < entry1));
+    markInvalid('entry2', !!(exit1 && entry2 && entry2 < exit1));
+    markInvalid('exit2', !!(entry2 && exit2 && exit2 < entry2));
 }
 
 // Add permit minutes (30 min step)
@@ -659,6 +679,7 @@ function updateAllCalculations() {
         updatePermitDisplay(index);
         updateExit2Placeholder(index);
         updatePermitButtonBlinking(index);
+        validateTimeOrder(index);
     });
     
     updateTotalDisplay();
