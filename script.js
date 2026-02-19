@@ -82,13 +82,9 @@ function attachEventListeners() {
         });
     });
     
-    // Time inputs
-    document.querySelectorAll('input[type="text"]').forEach(input => {
-        // Skip default day inputs - they have their own listeners
-        if (input.id && input.id.startsWith('default')) {
-            return;
-        }
-        
+    // Time inputs - only in the main work table
+    const workTableInputs = document.querySelectorAll('#workTableBody input[type="text"]');
+    workTableInputs.forEach(input => {
         input.addEventListener('change', () => {
             saveToStorage();
             updateAllCalculations();
@@ -526,19 +522,17 @@ function clearStorage() {
         // Clear week data only, not default day
         localStorage.removeItem(STORAGE_KEY);
         
-        // Clear all inputs and re-enable editing
-        document.querySelectorAll('input[type="text"]').forEach(input => {
-            if (!input.id.startsWith('default')) {
-                input.value = '';
-                input.disabled = false; // Re-enable all date inputs
-            }
+        // Clear all time inputs in work table and re-enable editing
+        const workTableInputs = document.querySelectorAll('#workTableBody input[type="text"]');
+        workTableInputs.forEach(input => {
+            input.value = '';
+            input.disabled = false; // Re-enable all time inputs
         });
         
-        // Uncheck all smartworking checkboxes
-        document.querySelectorAll('input[type="checkbox"]').forEach(input => {
-            if (!input.id.startsWith('default')) {
-                input.checked = false;
-            }
+        // Uncheck all smartworking checkboxes in work table
+        const workTableCheckboxes = document.querySelectorAll('#workTableBody input[type="checkbox"]');
+        workTableCheckboxes.forEach(checkbox => {
+            checkbox.checked = false;
         });
         
         // Apply default day to week
