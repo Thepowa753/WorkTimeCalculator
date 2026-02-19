@@ -532,11 +532,55 @@ function calculateDayMinutes(index) {
     return applyThreshold(calculateRawDayDiff(index));
 }
 
-// Calculate rubato minutes for a day (trimmed by the 5-minute threshold)
+// Calculate rubato minutes for a day (rounding loss per individual time entry)
 function calculateRubatoMinutes(index) {
-    const raw = calculateRawDayDiff(index);
-    const thresholded = applyThreshold(raw);
-    return raw - thresholded;
+    const data = getStoredData();
+    const dayData = data[index] || {};
+
+    // If smartworking is enabled, no rubato
+    if (dayData.smartworking) {
+        return 0;
+    }
+
+    const entry1 = dayData.entry1;
+    const exit1 = dayData.exit1;
+    const entry2 = dayData.entry2;
+    const exit2 = dayData.exit2;
+
+    // If no time data, return 0
+    if (!entry1 && !exit1 && !entry2 && !exit2) {
+        return 0;
+    }
+
+    // For entry times: system rounds UP to next 5-min mark (stolen = minutes until next multiple of 5)
+    function entryStolen(time) {
+        if (!time) return 0;
+        const [h, m] = time.split(':').map(Number);
+        return (THRESHOLD - ((h * 60 + m) % THRESHOLD)) % THRESHOLD;
+    }
+
+    // For exit times: system rounds DOWN to previous 5-min mark (stolen = remainder after dividing by 5)
+    function exitStolen(time) {
+        if (!time) return 0;
+        const [h, m] = time.split(':').map(Number);
+        return (h * 60 + m) % THRESHOLD;
+    }
+
+    let totalRubato = 0;
+
+    // Count entry1/exit1 rubato only if both are present
+    if (entry1 && exit1) {
+        totalRubato += entryStolen(entry1);
+        totalRubato += exitStolen(exit1);
+    }
+
+    // Count entry2/exit2 rubato only if both are present
+    if (entry2 && exit2) {
+        totalRubato += entryStolen(entry2);
+        totalRubato += exitStolen(exit2);
+    }
+
+    return totalRubato;
 }
 
 // Calculate time difference in minutes
