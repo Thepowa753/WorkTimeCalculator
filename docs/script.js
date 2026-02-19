@@ -1072,6 +1072,7 @@ function autoFillFromJobTimePage() {
                 // Extract ALL E/U stamps from a text block, returning {entries, exits}
                 function extractAllStamps(text) {
                     const entries = [], exits = [];
+                    const capturedTimestampPositions = new Set();
                     // Match every "E HH:MM[:SS]" or "U HH:MM[:SS]" occurrence
                     const stampPattern = /\b([EU])\s+(\d{1,2}:\d{2})(?::\d{2})?\b/gi;
                     let m;
@@ -1080,8 +1081,24 @@ function autoFillFromJobTimePage() {
                         const parts = m[2].split(':');
                         if (parts.length < 2 || !parts[0] || !parts[1]) continue;
                         const time = `${parts[0].padStart(2, '0')}:${parts[1]}`;
+                        // Record position of the time portion so we skip it in the fallback pass
+                        capturedTimestampPositions.add(m.index + m[0].indexOf(m[2]));
                         if (type === 'E') entries.push(time);
                         else if (type === 'U') exits.push(time);
+                    }
+                    // Fallback: capture standalone HH:MM[:SS] times not already matched above
+                    // and treat them as additional exits (e.g. last exit rendered without U prefix).
+                    // Note: this runs only on .boxTimb elements which contain exclusively stamp records.
+                    const timePattern = /\b(\d{1,2}:\d{2})(?::\d{2})?\b/g;
+                    while ((m = timePattern.exec(text)) !== null) {
+                        if (capturedTimestampPositions.has(m.index)) continue;
+                        const parts = m[1].split(':');
+                        if (parts.length < 2 || !parts[0] || !parts[1]) continue;
+                        const hour = parseInt(parts[0], 10);
+                        const minute = parseInt(parts[1], 10);
+                        if (hour > 23 || minute > 59) continue;
+                        const time = `${parts[0].padStart(2, '0')}:${parts[1]}`;
+                        exits.push(time);
                     }
                     return { entries, exits };
                 }
