@@ -111,6 +111,11 @@ function calculateDayMinutes(index) {
     const exit2 = dayData.exit2;
     const permit = dayData.permit || 0;
     
+    // If no time data is entered at all, return 0 (don't count this day)
+    if (!entry1 && !exit1 && !entry2 && !exit2 && permit === 0) {
+        return 0;
+    }
+    
     let totalMinutes = 0;
     
     // Calculate first time slot
