@@ -63,13 +63,40 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td><input type="text" id="defaultEntry1" placeholder="HH:MM" pattern="[0-9]{2}:[0-9]{2}"></td>
-                            <td><input type="text" id="defaultExit1" placeholder="HH:MM" pattern="[0-9]{2}:[0-9]{2}"></td>
-                            <td><input type="text" id="defaultEntry2" placeholder="HH:MM" pattern="[0-9]{2}:[0-9]{2}"></td>
-                            <td><input type="text" id="defaultExit2" placeholder="HH:MM" pattern="[0-9]{2}:[0-9]{2}"></td>
+                            <td>
+                                <div class="time-input-wrapper">
+                                    <input type="number" class="hour-input" id="defaultEntry1Hour" min="0" max="24" placeholder="00">
+                                    <span class="time-separator">:</span>
+                                    <input type="number" class="minute-input" id="defaultEntry1Minute" min="0" max="59" placeholder="00">
+                                </div>
+                            </td>
+                            <td>
+                                <div class="time-input-wrapper">
+                                    <input type="number" class="hour-input" id="defaultExit1Hour" min="0" max="24" placeholder="00">
+                                    <span class="time-separator">:</span>
+                                    <input type="number" class="minute-input" id="defaultExit1Minute" min="0" max="59" placeholder="00">
+                                </div>
+                            </td>
+                            <td>
+                                <div class="time-input-wrapper">
+                                    <input type="number" class="hour-input" id="defaultEntry2Hour" min="0" max="24" placeholder="00">
+                                    <span class="time-separator">:</span>
+                                    <input type="number" class="minute-input" id="defaultEntry2Minute" min="0" max="59" placeholder="00">
+                                </div>
+                            </td>
+                            <td>
+                                <div class="time-input-wrapper">
+                                    <input type="number" class="hour-input" id="defaultExit2Hour" min="0" max="24" placeholder="00">
+                                    <span class="time-separator">:</span>
+                                    <input type="number" class="minute-input" id="defaultExit2Minute" min="0" max="59" placeholder="00">
+                                </div>
+                            </td>
                         </tr>
                     </tbody>
                 </table>
+                <div class="default-day-actions">
+                    <button id="saveDefaultButton" class="btn btn-success">💾 Salva Giornata Default</button>
+                </div>
             </div>
         </div>
     </div>
