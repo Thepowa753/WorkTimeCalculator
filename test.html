@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Number Input</title>
+</head>
+<body>
+    <input type="number" id="test" min="0" max="59" placeholder="00">
+    <script>
+        const input = document.getElementById('test');
+        input.addEventListener('blur', () => {
+            let value = parseInt(input.value) || 0;
+            if (value < 0) value = 0;
+            if (value > 59) value = 59;
+            input.value = String(value).padStart(2, '0');
+        });
+    </script>
+</body>
+</html>
