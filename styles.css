@@ -215,6 +215,16 @@ input[type="time"] {
     color: var(--text-color);
 }
 
+/* Force 24-hour format for time inputs */
+input[type="time"]::-webkit-datetime-edit-ampm-field {
+    display: none;
+}
+
+/* Remove native time picker styling */
+input[type="time"] {
+    -webkit-appearance: textfield;
+}
+
 input[type="time"]:focus {
     outline: none;
     border-color: var(--primary-color);
@@ -424,5 +434,99 @@ input[type="time"]:disabled {
 
     .total-value {
         font-size: 2rem;
+    }
+}
+
+/* Default Day Section */
+.default-day-section {
+    margin-top: 40px;
+    padding: 25px;
+    background: var(--card-bg);
+    border-radius: 15px;
+    box-shadow: var(--shadow);
+    border: 2px solid var(--border-color);
+}
+
+.default-day-section h2 {
+    font-size: 1.5rem;
+    color: var(--primary-color);
+    margin-bottom: 10px;
+}
+
+.section-subtitle {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+}
+
+.default-day-wrapper {
+    overflow-x: auto;
+}
+
+.default-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: var(--bg-color);
+    border-radius: 10px;
+}
+
+.default-table thead {
+    background: linear-gradient(135deg, #48bb78, #38a169);
+    color: white;
+}
+
+.default-table th {
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.default-table th:first-child {
+    border-top-left-radius: 10px;
+}
+
+.default-table th:last-child {
+    border-top-right-radius: 10px;
+}
+
+.default-table td {
+    padding: 16px 12px;
+}
+
+.default-permit-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+@media (max-width: 768px) {
+    .default-day-section {
+        padding: 20px 15px;
+        margin-top: 30px;
+    }
+    
+    .default-day-section h2 {
+        font-size: 1.3rem;
+    }
+    
+    .section-subtitle {
+        font-size: 0.85rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .default-day-section h2 {
+        font-size: 1.2rem;
+    }
+    
+    .default-table {
+        font-size: 0.75rem;
+    }
+    
+    .default-table th,
+    .default-table td {
+        padding: 8px 4px;
     }
 }

@@ -7,6 +7,7 @@ const MIN_LUNCH_BREAK = 60; // Minimum lunch break in minutes
 const MIN_ENTRY_TIME = '07:30'; // Minimum entry time (earlier doesn't count)
 const MAX_EXIT_TIME = '20:00'; // Maximum exit time (later doesn't count)
 const STORAGE_KEY = 'workTimeData';
+const DEFAULT_DAY_KEY = 'defaultDayData';
 
 // Helper function to format minutes to HH:MM
 function formatMinutesToHHMM(minutes) {
@@ -21,7 +22,9 @@ function formatMinutesToHHMM(minutes) {
 document.addEventListener('DOMContentLoaded', () => {
     initializeTable();
     loadFromStorage();
+    loadDefaultDay();
     attachEventListeners();
+    attachDefaultDayListeners();
     updateAllCalculations();
 });
 
@@ -43,11 +46,11 @@ function createTableRow(day, index) {
     tr.innerHTML = `
         <td class="day-cell">${day}</td>
         <td><input type="checkbox" class="smartworking-check" data-index="${index}"></td>
-        <td><input type="time" class="entry1" data-index="${index}" step="300"></td>
-        <td><input type="time" class="exit1" data-index="${index}" step="300"></td>
-        <td><input type="time" class="entry2" data-index="${index}" step="300"></td>
+        <td><input type="time" class="entry1" data-index="${index}" step="300" pattern="[0-9]{2}:[0-9]{2}"></td>
+        <td><input type="time" class="exit1" data-index="${index}" step="300" pattern="[0-9]{2}:[0-9]{2}"></td>
+        <td><input type="time" class="entry2" data-index="${index}" step="300" pattern="[0-9]{2}:[0-9]{2}"></td>
         <td class="exit2-cell">
-            <input type="time" class="exit2" data-index="${index}" step="300">
+            <input type="time" class="exit2" data-index="${index}" step="300" pattern="[0-9]{2}:[0-9]{2}">
             <span class="exit2-tooltip" data-index="${index}"></span>
         </td>
         <td class="permit-cell">
@@ -320,6 +323,9 @@ function updateExit2Placeholder(index) {
     const exit2Input = document.querySelector(`.exit2[data-index="${index}"]`);
     const exit2Tooltip = document.querySelector(`.exit2-tooltip[data-index="${index}"]`);
     
+    // Guard against missing elements during initialization or when elements are being updated
+    if (!exit2Input || !exit2Tooltip) return;
+    
     // Only suggest if entry1, exit1, entry2 are filled but exit2 is not
     if (dayData.entry1 && dayData.exit1 && dayData.entry2 && !dayData.exit2) {
         const suggestedTime = calculateSuggestedExit2(index);
@@ -509,19 +515,24 @@ function loadFromStorage() {
 }
 
 function clearStorage() {
-    if (confirm('Sei sicuro di voler cancellare tutti i dati?')) {
+    if (confirm('Sei sicuro di voler cancellare tutti i dati della settimana? La giornata default verrà preservata.')) {
+        // Clear week data only, not default day
         localStorage.removeItem(STORAGE_KEY);
         
         // Clear all inputs
-        document.querySelectorAll('input[type="time"]').forEach(input => input.value = '');
-        document.querySelectorAll('input[type="checkbox"]').forEach(input => input.checked = false);
-        
-        // Reset permits
-        const data = {};
-        WORK_DAYS.forEach((_, index) => {
-            data[index] = { permit: 0 };
+        document.querySelectorAll('input[type="time"]').forEach(input => {
+            if (!input.id.startsWith('default')) {
+                input.value = '';
+            }
         });
-        saveData(data);
+        document.querySelectorAll('input[type="checkbox"]').forEach(input => {
+            if (!input.id.startsWith('default')) {
+                input.checked = false;
+            }
+        });
+        
+        // Apply default day to week
+        applyDefaultToWeek();
         
         updateAllCalculations();
     }
@@ -587,3 +598,141 @@ function exportToCSV() {
         document.body.removeChild(link);
     }
 }
+
+// Default Day functions
+function getDefaultDayData() {
+    const stored = localStorage.getItem(DEFAULT_DAY_KEY);
+    return stored ? JSON.parse(stored) : {};
+}
+
+function saveDefaultDayData(data) {
+    localStorage.setItem(DEFAULT_DAY_KEY, JSON.stringify(data));
+}
+
+function loadDefaultDay() {
+    const data = getDefaultDayData();
+    
+    if (data.smartworking !== undefined) {
+        document.getElementById('defaultSmartworking').checked = data.smartworking;
+        handleDefaultSmartWorkingChange(data.smartworking);
+    }
+    if (data.entry1) {
+        document.getElementById('defaultEntry1').value = data.entry1;
+    }
+    if (data.exit1) {
+        document.getElementById('defaultExit1').value = data.exit1;
+    }
+    if (data.entry2) {
+        document.getElementById('defaultEntry2').value = data.entry2;
+    }
+    if (data.exit2) {
+        document.getElementById('defaultExit2').value = data.exit2;
+    }
+    
+    updateDefaultPermitDisplay();
+}
+
+function saveDefaultDay() {
+    const data = {
+        smartworking: document.getElementById('defaultSmartworking').checked,
+        entry1: document.getElementById('defaultEntry1').value,
+        exit1: document.getElementById('defaultExit1').value,
+        entry2: document.getElementById('defaultEntry2').value,
+        exit2: document.getElementById('defaultExit2').value,
+        permit: getDefaultDayData().permit || 0
+    };
+    
+    saveDefaultDayData(data);
+}
+
+function handleDefaultSmartWorkingChange(isChecked) {
+    const entry1 = document.getElementById('defaultEntry1');
+    const exit1 = document.getElementById('defaultExit1');
+    const entry2 = document.getElementById('defaultEntry2');
+    const exit2 = document.getElementById('defaultExit2');
+    
+    if (isChecked) {
+        entry1.value = '';
+        exit1.value = '';
+        entry2.value = '';
+        exit2.value = '';
+        entry1.disabled = true;
+        exit1.disabled = true;
+        entry2.disabled = true;
+        exit2.disabled = true;
+    } else {
+        entry1.disabled = false;
+        exit1.disabled = false;
+        entry2.disabled = false;
+        exit2.disabled = false;
+    }
+}
+
+function addDefaultPermitMinutes() {
+    const data = getDefaultDayData();
+    const current = data.permit || 0;
+    data.permit = current + PERMIT_STEP;
+    
+    saveDefaultDayData(data);
+    updateDefaultPermitDisplay();
+}
+
+function removeDefaultPermitMinutes() {
+    const data = getDefaultDayData();
+    const current = data.permit || 0;
+    data.permit = Math.max(0, current - PERMIT_STEP);
+    
+    saveDefaultDayData(data);
+    updateDefaultPermitDisplay();
+}
+
+function updateDefaultPermitDisplay() {
+    const data = getDefaultDayData();
+    const permit = data.permit || 0;
+    const permitSpan = document.getElementById('defaultPermitValue');
+    
+    const hours = Math.floor(permit / 60);
+    const minutes = permit % 60;
+    permitSpan.textContent = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+}
+
+function attachDefaultDayListeners() {
+    // SmartWorking checkbox
+    document.getElementById('defaultSmartworking').addEventListener('change', (e) => {
+        handleDefaultSmartWorkingChange(e.target.checked);
+        saveDefaultDay();
+    });
+    
+    // Time inputs
+    ['defaultEntry1', 'defaultExit1', 'defaultEntry2', 'defaultExit2'].forEach(id => {
+        document.getElementById(id).addEventListener('change', () => {
+            saveDefaultDay();
+        });
+    });
+    
+    // Permit buttons
+    document.getElementById('defaultAddPermit').addEventListener('click', addDefaultPermitMinutes);
+    document.getElementById('defaultRemovePermit').addEventListener('click', removeDefaultPermitMinutes);
+}
+
+function applyDefaultToWeek() {
+    const defaultData = getDefaultDayData();
+    const weekData = {};
+    
+    // Apply default to all days
+    WORK_DAYS.forEach((_, index) => {
+        weekData[index] = {
+            smartworking: defaultData.smartworking || false,
+            entry1: defaultData.entry1 || '',
+            exit1: defaultData.exit1 || '',
+            entry2: defaultData.entry2 || '',
+            exit2: defaultData.exit2 || '',
+            permit: defaultData.permit || 0
+        };
+    });
+    
+    saveData(weekData);
+    loadFromStorage();
+    updateAllCalculations();
+}
+
