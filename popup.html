@@ -85,12 +85,20 @@
             padding: 8px 24px;
             border-radius: 10px;
         }
+        .summary-card-small {
+            padding: 5px 14px;
+            border-radius: 8px;
+        }
         .summary-card h2 {
             font-size: 0.85rem;
             margin-bottom: 2px;
         }
         .total-value {
             font-size: 1.7rem;
+            margin: 2px 0;
+        }
+        .total-value-small {
+            font-size: 1.1rem;
             margin: 2px 0;
         }
         .total-label {
@@ -136,13 +144,14 @@
                 <thead>
                     <tr>
                         <th>Giorno</th>
-                        <th>SmartWorking</th>
+                        <th>Smart</th>
                         <th>Entrata 1</th>
                         <th>Uscita 1</th>
                         <th>Entrata 2</th>
                         <th>Uscita 2</th>
                         <th>Permesso</th>
                         <th>Scarto (HH:MM)</th>
+                        <th>Rubati</th>
                     </tr>
                 </thead>
                 <tbody id="workTableBody">
@@ -156,6 +165,11 @@
                 <h2>Totale Scarto</h2>
                 <div id="totalMinutes" class="total-value">00:00</div>
                 <p class="total-label">ore di scarto (HH:MM)</p>
+            </div>
+            <div class="summary-card summary-card-small">
+                <h2>Totale Rubati</h2>
+                <div id="totalRubato" class="total-value total-value-small">00:00</div>
+                <p class="total-label">min. rubati (HH:MM)</p>
             </div>
         </div>
 
