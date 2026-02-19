@@ -128,7 +128,7 @@ function createTableRow(day, index) {
         <td class="exit2-cell">
             <div class="time-input-wrapper">
                 <input type="number" class="hour-input exit2-hour" data-index="${index}" min="0" max="24" placeholder="00">
-                <span class="time-separator">:</span>
+                <span class="time-separator exit2-separator" data-index="${index}">:</span>
                 <input type="number" class="minute-input exit2-minute" data-index="${index}" min="0" max="59" placeholder="00">
             </div>
             <span class="exit2-tooltip" data-index="${index}"></span>
@@ -139,6 +139,7 @@ function createTableRow(day, index) {
             <span class="permit-value" data-index="${index}">00:00</span>
         </td>
         <td class="diff-cell diff-neutral" data-index="${index}">00:00</td>
+        <td class="rubato-cell" data-index="${index}">00:00</td>
     `;
     
     return tr;
@@ -316,7 +317,7 @@ function showLunchBreakWarning(index, message) {
         warningRow.dataset.index = index;
         
         const warningCell = document.createElement('td');
-        warningCell.colSpan = 8;
+        warningCell.colSpan = 9;
         warningCell.appendChild(warningEl);
         warningRow.appendChild(warningCell);
         
@@ -468,43 +469,48 @@ function updatePermitButtonBlinking(index) {
     }
 }
 
-// Calculate minutes worked for a day
-function calculateDayMinutes(index) {
+// Calculate raw day diff (before threshold rounding)
+function calculateRawDayDiff(index) {
     const data = getStoredData();
     const dayData = data[index] || {};
-    
+
     // If smartworking is enabled, always return 0 (8h standard)
     if (dayData.smartworking) {
         return 0;
     }
-    
+
     const entry1 = dayData.entry1;
     const exit1 = dayData.exit1;
     const entry2 = dayData.entry2;
     const exit2 = dayData.exit2;
     const permit = dayData.permit || 0;
-    
+
     // If no time data is entered at all, return 0 (don't count this day)
     if (!entry1 && !exit1 && !entry2 && !exit2 && permit === 0) {
         return 0;
     }
-    
+
+    // If entry2 is set but exit2 is not, don't calculate (return 0)
+    if (entry2 && !exit2) {
+        return 0;
+    }
+
     let totalMinutes = 0;
-    
+
     // Calculate first time slot with time boundaries
     if (entry1 && exit1) {
         const cappedEntry1 = capTime(entry1, MIN_ENTRY_TIME, MAX_EXIT_TIME, true);
         const cappedExit1 = capTime(exit1, MIN_ENTRY_TIME, MAX_EXIT_TIME, false);
         totalMinutes += calculateTimeDifference(cappedEntry1, cappedExit1);
     }
-    
+
     // Calculate second time slot only if both entry2 and exit2 are present
     if (entry2 && exit2) {
         const cappedEntry2 = capTime(entry2, MIN_ENTRY_TIME, MAX_EXIT_TIME, true);
         const cappedExit2 = capTime(exit2, MIN_ENTRY_TIME, MAX_EXIT_TIME, false);
         totalMinutes += calculateTimeDifference(cappedEntry2, cappedExit2);
     }
-    
+
     // Apply minimum lunch break rule (exit1 to entry2)
     if (exit1 && entry2) {
         const actualBreak = calculateTimeDifference(exit1, entry2);
@@ -513,15 +519,24 @@ function calculateDayMinutes(index) {
             totalMinutes -= (MIN_LUNCH_BREAK - actualBreak);
         }
     }
-    
+
     // Add permit minutes (they count as additional worked minutes)
     totalMinutes += permit;
-    
-    // Calculate difference from standard 8 hours
-    const diff = totalMinutes - STANDARD_HOURS;
-    
-    // Apply 5-minute threshold rounding
-    return applyThreshold(diff);
+
+    // Return difference from standard 8 hours (before threshold)
+    return totalMinutes - STANDARD_HOURS;
+}
+
+// Calculate minutes worked for a day (with threshold applied)
+function calculateDayMinutes(index) {
+    return applyThreshold(calculateRawDayDiff(index));
+}
+
+// Calculate rubato minutes for a day (trimmed by the 5-minute threshold)
+function calculateRubatoMinutes(index) {
+    const raw = calculateRawDayDiff(index);
+    const thresholded = applyThreshold(raw);
+    return raw - thresholded;
 }
 
 // Calculate time difference in minutes
@@ -682,9 +697,12 @@ function updateAllCalculations() {
         updateExit2Placeholder(index);
         updatePermitButtonBlinking(index);
         validateTimeOrder(index);
+        updateRubatoDisplay(index, calculateRubatoMinutes(index));
+        updateExit2SeparatorBlink(index);
     });
     
     updateTotalDisplay();
+    updateTotalRubatoDisplay();
 }
 
 // Update day difference display
@@ -725,6 +743,39 @@ function updateTotalDisplay() {
     // Update styling
     totalElement.style.color = total > 0 ? 'var(--success-color)' : 
                                total < 0 ? 'var(--danger-color)' : 'white';
+}
+
+// Update rubato display for a day
+function updateRubatoDisplay(index, rubato) {
+    const cell = document.querySelector(`.rubato-cell[data-index="${index}"]`);
+    if (!cell) return;
+    cell.textContent = formatMinutesToHHMM(rubato);
+}
+
+// Calculate total rubato minutes
+function calculateTotalRubato() {
+    let total = 0;
+    WORK_DAYS.forEach((_, index) => {
+        total += calculateRubatoMinutes(index);
+    });
+    return total;
+}
+
+// Update total rubato display
+function updateTotalRubatoDisplay() {
+    const el = document.getElementById('totalRubato');
+    if (!el) return;
+    el.textContent = formatMinutesToHHMM(calculateTotalRubato());
+}
+
+// Blink exit2 separator red when entry2 is set but exit2 is not
+function updateExit2SeparatorBlink(index) {
+    const data = getStoredData();
+    const dayData = data[index] || {};
+    const separator = document.querySelector(`.exit2-separator[data-index="${index}"]`);
+    if (!separator) return;
+    const shouldBlink = !!(dayData.entry2 && !dayData.exit2);
+    separator.classList.toggle('exit2-separator-blink', shouldBlink);
 }
 
 // LocalStorage functions
@@ -820,16 +871,18 @@ function exportToCSV() {
     let csvContent = '';
     
     // Add header row
-    csvContent += 'Giorno,SmartWorking,Entrata 1,Uscita 1,Entrata 2,Uscita 2,Permesso,Scarto (HH:MM)\n';
+    csvContent += 'Giorno,SmartWorking,Entrata 1,Uscita 1,Entrata 2,Uscita 2,Permesso,Scarto (HH:MM),Rubati\n';
     
     // Add data rows
     WORK_DAYS.forEach((day, index) => {
         const dayData = data[index] || {};
         const diff = calculateDayMinutes(index);
+        const rubato = calculateRubatoMinutes(index);
         
         // Format difference and permit as HH:MM using helper
         const diffFormatted = formatMinutesToHHMM(diff);
         const permitFormatted = formatMinutesToHHMM(dayData.permit || 0);
+        const rubatoFormatted = formatMinutesToHHMM(rubato);
         
         csvContent += `${day},`;
         csvContent += `${dayData.smartworking ? 'Sì' : 'No'},`;
@@ -838,7 +891,8 @@ function exportToCSV() {
         csvContent += `${dayData.entry2 || ''},`;
         csvContent += `${dayData.exit2 || ''},`;
         csvContent += `${permitFormatted},`;
-        csvContent += `${diffFormatted}\n`;
+        csvContent += `${diffFormatted},`;
+        csvContent += `${rubatoFormatted}\n`;
     });
     
     // Add empty row
@@ -847,8 +901,10 @@ function exportToCSV() {
     // Add total row
     const total = calculateTotalMinutes();
     const totalFormatted = formatMinutesToHHMM(total);
+    const totalRubato = calculateTotalRubato();
+    const totalRubatoFormatted = formatMinutesToHHMM(totalRubato);
     
-    csvContent += `TOTALE SCARTO,,,,,,,${totalFormatted}\n`;
+    csvContent += `TOTALE SCARTO,,,,,,,${totalFormatted},${totalRubatoFormatted}\n`;
     
     // Create blob and download link
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });

@@ -123,6 +123,23 @@ h1 {
     }
 }
 
+/* Blinking red animation for exit2 separator when entry2 is set but exit2 is not */
+.exit2-separator-blink {
+    animation: blink-red 1s ease-in-out infinite;
+    color: var(--danger-color) !important;
+}
+
+@keyframes blink-red {
+    0%, 100% {
+        opacity: 1;
+        color: var(--danger-color);
+    }
+    50% {
+        opacity: 0.2;
+        color: var(--danger-color);
+    }
+}
+
 .btn-secondary {
     background: #718096;
     color: white;
@@ -431,6 +448,8 @@ input[type="time"]:disabled {
 .summary {
     display: flex;
     justify-content: center;
+    align-items: flex-end;
+    gap: 16px;
     margin-top: 30px;
 }
 
@@ -441,6 +460,11 @@ input[type="time"]:disabled {
     text-align: center;
     color: white;
     box-shadow: var(--shadow-lg);
+}
+
+.summary-card-small {
+    padding: 16px 28px;
+    border-radius: 12px;
 }
 
 .summary-card h2 {
@@ -455,9 +479,21 @@ input[type="time"]:disabled {
     margin: 10px 0;
 }
 
+.total-value-small {
+    font-size: 1.8rem;
+    margin: 6px 0;
+}
+
 .total-label {
     font-size: 0.9rem;
     opacity: 0.9;
+}
+
+.rubato-cell {
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-align: center;
+    color: var(--text-secondary);
 }
 
 /* Mobile Responsive */
