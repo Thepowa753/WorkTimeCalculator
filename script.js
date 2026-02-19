@@ -323,6 +323,9 @@ function updateExit2Placeholder(index) {
     const exit2Input = document.querySelector(`.exit2[data-index="${index}"]`);
     const exit2Tooltip = document.querySelector(`.exit2-tooltip[data-index="${index}"]`);
     
+    // Check if elements exist
+    if (!exit2Input || !exit2Tooltip) return;
+    
     // Only suggest if entry1, exit1, entry2 are filled but exit2 is not
     if (dayData.entry1 && dayData.exit1 && dayData.entry2 && !dayData.exit2) {
         const suggestedTime = calculateSuggestedExit2(index);
