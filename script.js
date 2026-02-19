@@ -8,6 +8,15 @@ const MIN_ENTRY_TIME = '07:30'; // Minimum entry time (earlier doesn't count)
 const MAX_EXIT_TIME = '18:00'; // Maximum exit time (later doesn't count)
 const STORAGE_KEY = 'workTimeData';
 
+// Helper function to format minutes to HH:MM
+function formatMinutesToHHMM(minutes) {
+    const sign = minutes < 0 ? '-' : '';
+    const absMinutes = Math.abs(minutes);
+    const hours = Math.floor(absMinutes / 60);
+    const mins = absMinutes % 60;
+    return `${sign}${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+}
+
 // Initialize the application
 document.addEventListener('DOMContentLoaded', () => {
     initializeTable();
@@ -46,7 +55,7 @@ function createTableRow(day, index) {
             <button class="btn btn-primary add-permit" data-index="${index}">+</button>
             <span class="permit-value" data-index="${index}">00:00</span>
         </td>
-        <td class="diff-cell diff-neutral" data-index="${index}">0</td>
+        <td class="diff-cell diff-neutral" data-index="${index}">00:00</td>
     `;
     
     return tr;
@@ -56,6 +65,9 @@ function createTableRow(day, index) {
 function attachEventListeners() {
     // Clear button
     document.getElementById('clearButton').addEventListener('click', clearStorage);
+    
+    // Export button
+    document.getElementById('exportButton').addEventListener('click', exportToCSV);
     
     // SmartWorking checkboxes - dedicated listener
     document.querySelectorAll('.smartworking-check').forEach(checkbox => {
@@ -403,7 +415,9 @@ function updateAllCalculations() {
 // Update day difference display
 function updateDayDiffDisplay(index, diff) {
     const cell = document.querySelector(`.diff-cell[data-index="${index}"]`);
-    cell.textContent = diff;
+    
+    // Convert to HH:MM format using helper
+    cell.textContent = formatMinutesToHHMM(diff);
     
     // Update styling based on value
     cell.classList.remove('diff-positive', 'diff-negative', 'diff-neutral');
@@ -430,7 +444,8 @@ function updateTotalDisplay() {
     const total = calculateTotalMinutes();
     const totalElement = document.getElementById('totalMinutes');
     
-    totalElement.textContent = total;
+    // Convert to HH:MM format using helper
+    totalElement.textContent = formatMinutesToHHMM(total);
     
     // Update styling
     totalElement.style.color = total > 0 ? 'var(--success-color)' : 
@@ -509,5 +524,66 @@ function clearStorage() {
         saveData(data);
         
         updateAllCalculations();
+    }
+}
+
+// Export to CSV
+function exportToCSV() {
+    const data = getStoredData();
+    
+    // Prepare CSV content
+    let csvContent = '';
+    
+    // Add header row
+    csvContent += 'Giorno,SmartWorking,Entrata 1,Uscita 1,Entrata 2,Uscita 2,Permesso,Scarto (HH:MM)\n';
+    
+    // Add data rows
+    WORK_DAYS.forEach((day, index) => {
+        const dayData = data[index] || {};
+        const diff = calculateDayMinutes(index);
+        
+        // Format difference and permit as HH:MM using helper
+        const diffFormatted = formatMinutesToHHMM(diff);
+        const permitFormatted = formatMinutesToHHMM(dayData.permit || 0);
+        
+        csvContent += `${day},`;
+        csvContent += `${dayData.smartworking ? 'Sì' : 'No'},`;
+        csvContent += `${dayData.entry1 || ''},`;
+        csvContent += `${dayData.exit1 || ''},`;
+        csvContent += `${dayData.entry2 || ''},`;
+        csvContent += `${dayData.exit2 || ''},`;
+        csvContent += `${permitFormatted},`;
+        csvContent += `${diffFormatted}\n`;
+    });
+    
+    // Add empty row
+    csvContent += '\n';
+    
+    // Add total row
+    const total = calculateTotalMinutes();
+    const totalFormatted = formatMinutesToHHMM(total);
+    
+    csvContent += `TOTALE SCARTO,,,,,,,${totalFormatted}\n`;
+    
+    // Create blob and download link
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    
+    // Generate filename with current date
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const filename = `WorkTime_${dateStr}.csv`;
+    
+    // Create download link
+    if (navigator.msSaveBlob) {
+        // IE 10+
+        navigator.msSaveBlob(blob, filename);
+    } else {
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
 }
