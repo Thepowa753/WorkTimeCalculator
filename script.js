@@ -343,8 +343,11 @@ function calculateSuggestedExit2(index) {
     
     const finalExit2TotalMin = Math.min(exit2TotalMin, maxTotalMin);
     
-    const exit2Hour = Math.floor(finalExit2TotalMin / 60);
-    const exit2Minute = finalExit2TotalMin % 60;
+    // Round down to 5-minute steps
+    const roundedExit2TotalMin = Math.floor(finalExit2TotalMin / THRESHOLD) * THRESHOLD;
+    
+    const exit2Hour = Math.floor(roundedExit2TotalMin / 60);
+    const exit2Minute = roundedExit2TotalMin % 60;
     
     return `${String(exit2Hour).padStart(2, '0')}:${String(exit2Minute).padStart(2, '0')}`;
 }
