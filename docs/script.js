@@ -1094,27 +1094,49 @@ function autoFillFromJobTimePage() {
 
                 // --- Primary strategy: day name is embedded in the .boxTimb text ---
                 let foundAnyDay = false;
+                let lastDayIdx = -1;
+                const dayAccum = {}; // dayIdx -> { entries: [], exits: [], noStamps: bool }
                 allBoxes.forEach(box => {
                     const text = box.textContent.trim();
                     const lower = text.toLowerCase();
-                    const dayIdx = ITALIAN_DAYS.findIndex(d => lower.includes(d));
-                    if (dayIdx === -1) return;
-                    foundAnyDay = true;
+                    let dayIdx = ITALIAN_DAYS.findIndex(d => lower.includes(d));
+                    if (dayIdx !== -1) {
+                        lastDayIdx = dayIdx;
+                        foundAnyDay = true;
+                    } else if (lastDayIdx !== -1) {
+                        dayIdx = lastDayIdx; // assign orphan box to last known day
+                    } else {
+                        return; // no day context yet
+                    }
+
+                    if (!dayAccum[dayIdx]) dayAccum[dayIdx] = { entries: [], exits: [], noStamps: false };
 
                     if (lower.includes('nessuna timbratura')) {
-                        result[dayIdx] = { entry1: null, exit1: null, entry2: null, exit2: null };
+                        dayAccum[dayIdx].noStamps = true;
                         console.log(`[WorkTimeCalculator] Day ${dayIdx} (${ITALIAN_DAYS[dayIdx]}): no stamps`);
                         return;
                     }
 
                     const { entries, exits } = extractAllStamps(text);
-                    result[dayIdx] = {
-                        entry1: entries[0] || null,
-                        entry2: entries[1] || null,
-                        exit1: exits[0] || null,
-                        exit2: exits[1] || null
-                    };
+                    dayAccum[dayIdx].entries.push(...entries);
+                    dayAccum[dayIdx].exits.push(...exits);
                     console.log(`[WorkTimeCalculator] Day ${dayIdx} (${ITALIAN_DAYS[dayIdx]}): entries=${JSON.stringify(entries)}, exits=${JSON.stringify(exits)}`);
+                });
+
+                // Finalize accumulated results
+                Object.keys(dayAccum).forEach(key => {
+                    const idx = parseInt(key);
+                    const accum = dayAccum[idx];
+                    if (accum.noStamps && accum.entries.length === 0 && accum.exits.length === 0) {
+                        result[idx] = { entry1: null, exit1: null, entry2: null, exit2: null };
+                    } else {
+                        result[idx] = {
+                            entry1: accum.entries[0] || null,
+                            entry2: accum.entries[1] || null,
+                            exit1: accum.exits[0] || null,
+                            exit2: accum.exits[1] || null
+                        };
+                    }
                 });
 
                 // --- Fallback: day name lives in an ancestor element; group boxes by nearest day-named ancestor ---
@@ -1271,7 +1293,9 @@ function importFromJobHour() {
 }
 
 function attachImportListeners() {
-    document.getElementById('importButton').addEventListener('click', importFromJobHour);
+    const importButton = document.getElementById('importButton');
+    if (!importButton) return;
+    importButton.addEventListener('click', importFromJobHour);
 }
 
 
