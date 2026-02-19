@@ -17,15 +17,16 @@
             max-width: 100%;
             padding: 8px;
             border-radius: 12px;
+            margin-top: -4px;
         }
         header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
         }
         h1 {
-            font-size: 1.4rem;
+            font-size: 1.3rem;
             margin-bottom: 0;
         }
         .subtitle {
@@ -46,7 +47,7 @@
             margin-left: 3px;
         }
         .table-wrapper {
-            margin-bottom: 8px;
+            margin-bottom: 5px;
         }
         th {
             padding: 7px 5px;
@@ -170,59 +171,6 @@
                 <h2>Totale Rubati</h2>
                 <div id="totalRubato" class="total-value total-value-small">00:00</div>
                 <p class="total-label">min. rubati (HH:MM)</p>
-            </div>
-        </div>
-
-        <div class="default-day-section">
-            <h2>⚙️ Giornata Default</h2>
-            <p class="section-subtitle">Configura una giornata predefinita che verrà applicata quando pulisci la settimana</p>
-            
-            <div class="default-day-wrapper">
-                <table class="default-table">
-                    <thead>
-                        <tr>
-                            <th>Entrata 1</th>
-                            <th>Uscita 1</th>
-                            <th>Entrata 2</th>
-                            <th>Uscita 2</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>
-                                <div class="time-input-wrapper">
-                                    <input type="number" class="hour-input" id="defaultEntry1Hour" min="0" max="24" placeholder="00">
-                                    <span class="time-separator">:</span>
-                                    <input type="number" class="minute-input" id="defaultEntry1Minute" min="0" max="59" placeholder="00">
-                                </div>
-                            </td>
-                            <td>
-                                <div class="time-input-wrapper">
-                                    <input type="number" class="hour-input" id="defaultExit1Hour" min="0" max="24" placeholder="00">
-                                    <span class="time-separator">:</span>
-                                    <input type="number" class="minute-input" id="defaultExit1Minute" min="0" max="59" placeholder="00">
-                                </div>
-                            </td>
-                            <td>
-                                <div class="time-input-wrapper">
-                                    <input type="number" class="hour-input" id="defaultEntry2Hour" min="0" max="24" placeholder="00">
-                                    <span class="time-separator">:</span>
-                                    <input type="number" class="minute-input" id="defaultEntry2Minute" min="0" max="59" placeholder="00">
-                                </div>
-                            </td>
-                            <td>
-                                <div class="time-input-wrapper">
-                                    <input type="number" class="hour-input" id="defaultExit2Hour" min="0" max="24" placeholder="00">
-                                    <span class="time-separator">:</span>
-                                    <input type="number" class="minute-input" id="defaultExit2Minute" min="0" max="59" placeholder="00">
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-                <div class="default-day-actions">
-                    <button id="saveDefaultButton" class="btn btn-success">💾 Salva Giornata Default</button>
-                </div>
             </div>
         </div>
     </div>
