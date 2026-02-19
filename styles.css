@@ -98,6 +98,22 @@ h1 {
     background: #5a67d8;
 }
 
+/* Blinking animation for permit button */
+.btn-primary.blink {
+    animation: blink-animation 1s ease-in-out infinite;
+}
+
+@keyframes blink-animation {
+    0%, 100% {
+        opacity: 1;
+        box-shadow: var(--shadow);
+    }
+    50% {
+        opacity: 0.4;
+        box-shadow: 0 0 10px rgba(102, 126, 234, 0.8);
+    }
+}
+
 .btn-secondary {
     background: #718096;
     color: white;
