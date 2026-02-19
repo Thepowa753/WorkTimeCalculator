@@ -54,7 +54,13 @@ function setTimeValue(hourClass, minuteClass, index, timeValue) {
 
 // Helper function to validate and format number input (2 digits)
 function formatNumberInput(input, max) {
-    let value = parseInt(input.value) || 0;
+    if (input.value === '') return;
+    
+    let value = parseInt(input.value);
+    if (isNaN(value)) {
+        input.value = '';
+        return;
+    }
     
     // Clamp value within range
     if (value < 0) value = 0;
@@ -93,6 +99,7 @@ function createTableRow(day, index) {
         <td class="day-cell">
             ${day}
             <button class="btn-autofill" data-index="${index}" title="Compila con giornata default">⚡</button>
+            <button class="btn-clearday" data-index="${index}" title="Cancella giornata">🗑️</button>
         </td>
         <td><input type="checkbox" class="smartworking-check" data-index="${index}"></td>
         <td>
@@ -208,6 +215,14 @@ function attachEventListeners() {
         button.addEventListener('click', (e) => {
             const index = parseInt(e.target.dataset.index);
             applyDefaultToDay(index);
+        });
+    });
+    
+    // Clear day buttons
+    document.querySelectorAll('.btn-clearday').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const index = parseInt(e.target.dataset.index);
+            clearDay(index);
         });
     });
 }
@@ -978,6 +993,34 @@ function applyDefaultToDay(index) {
         handleSmartWorkingChange(index, false);
     }
     
+    updateAllCalculations();
+}
+
+function clearDay(index) {
+    const data = getStoredData();
+    data[index] = {
+        smartworking: false,
+        entry1: '',
+        exit1: '',
+        entry2: '',
+        exit2: '',
+        permit: 0
+    };
+    saveData(data);
+    
+    // Clear UI inputs
+    ['entry1', 'exit1', 'entry2', 'exit2'].forEach(field => {
+        setTimeValue(`${field}-hour`, `${field}-minute`, index, '');
+    });
+    
+    // Uncheck smartworking and re-enable fields
+    const swCheckbox = document.querySelector(`.smartworking-check[data-index="${index}"]`);
+    if (swCheckbox) {
+        swCheckbox.checked = false;
+        handleSmartWorkingChange(index, false);
+    }
+    
+    clearLunchBreakWarning(index);
     updateAllCalculations();
 }
 
