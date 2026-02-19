@@ -938,27 +938,17 @@ function applyDefaultToDay(index) {
     
     saveData(data);
     
-    // Update the UI for this specific day
-    if (data[index].entry1) {
-        setTimeValue('entry1-hour', 'entry1-minute', index, data[index].entry1);
-    } else {
-        setTimeValue('entry1-hour', 'entry1-minute', index, '');
-    }
-    if (data[index].exit1) {
-        setTimeValue('exit1-hour', 'exit1-minute', index, data[index].exit1);
-    } else {
-        setTimeValue('exit1-hour', 'exit1-minute', index, '');
-    }
-    if (data[index].entry2) {
-        setTimeValue('entry2-hour', 'entry2-minute', index, data[index].entry2);
-    } else {
-        setTimeValue('entry2-hour', 'entry2-minute', index, '');
-    }
-    if (data[index].exit2) {
-        setTimeValue('exit2-hour', 'exit2-minute', index, data[index].exit2);
-    } else {
-        setTimeValue('exit2-hour', 'exit2-minute', index, '');
-    }
+    // Update the UI for this specific day using a helper
+    const updateField = (field) => {
+        const hourClass = `${field}-hour`;
+        const minuteClass = `${field}-minute`;
+        setTimeValue(hourClass, minuteClass, index, data[index][field] || '');
+    };
+    
+    updateField('entry1');
+    updateField('exit1');
+    updateField('entry2');
+    updateField('exit2');
     
     // Uncheck smartworking
     const swCheckbox = document.querySelector(`.smartworking-check[data-index="${index}"]`);
