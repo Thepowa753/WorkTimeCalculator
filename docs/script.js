@@ -1047,7 +1047,7 @@ function clearDay(index) {
     updateAllCalculations();
 }
 
-// Auto-fill today's entry/exit fields from the jobtime compilazione page
+// Auto-fill all weekday entry/exit fields from the jobtime compilazione page
 function autoFillFromJobTimePage() {
     if (!chrome || !chrome.tabs || !chrome.scripting) return;
 
@@ -1065,51 +1065,122 @@ function autoFillFromJobTimePage() {
         chrome.scripting.executeScript({
             target: { tabId: tabs[0].id },
             func: () => {
-                const boxes = document.querySelectorAll('.boxTimb');
-                const entries = [];
-                const exits = [];
+                const ITALIAN_DAYS = ['lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì'];
+                // result[0]=Monday ... result[4]=Friday
+                const result = [null, null, null, null, null];
 
-                boxes.forEach(box => {
-                    const text = box.textContent.trim();
-                    if (text.includes('Nessuna Timbratura!')) return;
-
-                    const timeMatch = text.match(/\b([01]\d|2[0-3]):[0-5]\d\b/);
-                    if (!timeMatch) return;
-                    const time = timeMatch[0];
-
-                    // Determine entry (E) or exit (U)
-                    const typeMatch = text.match(/\b([EU])\b/i);
-                    if (!typeMatch) return;
-                    const typeChar = typeMatch[1].toUpperCase();
-
-                    if (typeChar === 'E') {
-                        entries.push(time);
-                    } else if (typeChar === 'U') {
-                        exits.push(time);
+                // Extract ALL E/U stamps from a text block, returning {entries, exits}
+                function extractAllStamps(text) {
+                    const entries = [], exits = [];
+                    // Match every "E HH:MM[:SS]" or "U HH:MM[:SS]" occurrence
+                    const stampPattern = /\b([EU])\s+(\d{1,2}:\d{2})(?::\d{2})?\b/gi;
+                    let m;
+                    while ((m = stampPattern.exec(text)) !== null) {
+                        const type = m[1].toUpperCase();
+                        const parts = m[2].split(':');
+                        if (parts.length < 2 || !parts[0] || !parts[1]) continue;
+                        const time = `${parts[0].padStart(2, '0')}:${parts[1]}`;
+                        if (type === 'E') entries.push(time);
+                        else if (type === 'U') exits.push(time);
                     }
+                    return { entries, exits };
+                }
+
+                const allBoxes = Array.from(document.querySelectorAll('.boxTimb'));
+                console.log('[WorkTimeCalculator] Found', allBoxes.length, 'boxTimb elements on', location.href);
+                allBoxes.forEach((b, i) => {
+                    console.log(`[WorkTimeCalculator] boxTimb[${i}]: "${b.textContent.trim()}"`);
                 });
 
-                return {
-                    entry1: entries[0] || null,
-                    entry2: entries[1] || null,
-                    exit1: exits[0] || null,
-                    exit2: exits[1] || null
-                };
+                // --- Primary strategy: day name is embedded in the .boxTimb text ---
+                let foundAnyDay = false;
+                allBoxes.forEach(box => {
+                    const text = box.textContent.trim();
+                    const lower = text.toLowerCase();
+                    const dayIdx = ITALIAN_DAYS.findIndex(d => lower.includes(d));
+                    if (dayIdx === -1) return;
+                    foundAnyDay = true;
+
+                    if (lower.includes('nessuna timbratura')) {
+                        result[dayIdx] = { entry1: null, exit1: null, entry2: null, exit2: null };
+                        console.log(`[WorkTimeCalculator] Day ${dayIdx} (${ITALIAN_DAYS[dayIdx]}): no stamps`);
+                        return;
+                    }
+
+                    const { entries, exits } = extractAllStamps(text);
+                    result[dayIdx] = {
+                        entry1: entries[0] || null,
+                        entry2: entries[1] || null,
+                        exit1: exits[0] || null,
+                        exit2: exits[1] || null
+                    };
+                    console.log(`[WorkTimeCalculator] Day ${dayIdx} (${ITALIAN_DAYS[dayIdx]}): entries=${JSON.stringify(entries)}, exits=${JSON.stringify(exits)}`);
+                });
+
+                // --- Fallback: day name lives in an ancestor element; group boxes by nearest day-named ancestor ---
+                if (!foundAnyDay) {
+                    console.log('[WorkTimeCalculator] Day names not found inside boxTimb, trying ancestor strategy');
+                    const dayGroupMap = new Map(); // dayIdx -> box[]
+                    allBoxes.forEach(box => {
+                        let el = box.parentElement;
+                        let depth = 0;
+                        while (el && el !== document.body && depth < 10) {
+                            const lower = el.textContent.toLowerCase();
+                            const dayIdx = ITALIAN_DAYS.findIndex(d => lower.includes(d));
+                            if (dayIdx !== -1) {
+                                if (!dayGroupMap.has(dayIdx)) dayGroupMap.set(dayIdx, []);
+                                dayGroupMap.get(dayIdx).push(box);
+                                break;
+                            }
+                            el = el.parentElement;
+                            depth++;
+                        }
+                    });
+                    console.log('[WorkTimeCalculator] Ancestor strategy: found', dayGroupMap.size, 'day groups');
+                    dayGroupMap.forEach((boxes, dayIdx) => {
+                        const entries = [], exits = [];
+                        boxes.forEach(box => {
+                            const text = box.textContent.trim();
+                            if (text.toLowerCase().includes('nessuna timbratura')) return;
+                            const stamps = extractAllStamps(text);
+                            entries.push(...stamps.entries);
+                            exits.push(...stamps.exits);
+                        });
+                        result[dayIdx] = {
+                            entry1: entries[0] || null,
+                            entry2: entries[1] || null,
+                            exit1: exits[0] || null,
+                            exit2: exits[1] || null
+                        };
+                        console.log(`[WorkTimeCalculator] Day ${dayIdx} (${ITALIAN_DAYS[dayIdx]}): entries=${JSON.stringify(entries)}, exits=${JSON.stringify(exits)}`);
+                    });
+                }
+
+                console.log('[WorkTimeCalculator] Final week result:', JSON.stringify(result));
+                return result;
             }
         }, (results) => {
-            if (chrome.runtime.lastError || !results || !results[0]) return;
-            const data = results[0].result;
-            if (!data) return;
+            if (chrome.runtime.lastError || !results || !results[0]) {
+                console.error('[WorkTimeCalculator] Script execution error:', chrome.runtime.lastError?.message);
+                return;
+            }
+            const weekData = results[0].result;
+            if (!weekData) {
+                console.warn('[WorkTimeCalculator] No week data returned from page script');
+                return;
+            }
 
-            // Determine today's row index (0=Monday … 4=Friday)
-            const dayOfWeek = new Date().getDay(); // 0=Sun,1=Mon,...,6=Sat
-            if (dayOfWeek < 1 || dayOfWeek > 5) return;
-            const index = dayOfWeek - 1; // 0=Mon,...,4=Fri
-
-            if (data.entry1) setTimeValue('entry1-hour', 'entry1-minute', index, data.entry1);
-            if (data.exit1) setTimeValue('exit1-hour', 'exit1-minute', index, data.exit1);
-            if (data.entry2) setTimeValue('entry2-hour', 'entry2-minute', index, data.entry2);
-            if (data.exit2) setTimeValue('exit2-hour', 'exit2-minute', index, data.exit2);
+            console.log('[WorkTimeCalculator] Populating table with week data:', weekData);
+            let filledDays = 0;
+            weekData.forEach((dayData, index) => {
+                if (!dayData) return;
+                if (dayData.entry1) setTimeValue('entry1-hour', 'entry1-minute', index, dayData.entry1);
+                if (dayData.exit1)  setTimeValue('exit1-hour',  'exit1-minute',  index, dayData.exit1);
+                if (dayData.entry2) setTimeValue('entry2-hour', 'entry2-minute', index, dayData.entry2);
+                if (dayData.exit2)  setTimeValue('exit2-hour',  'exit2-minute',  index, dayData.exit2);
+                filledDays++;
+            });
+            console.log('[WorkTimeCalculator] Filled', filledDays, 'day(s)');
 
             saveToStorage();
             updateAllCalculations();
