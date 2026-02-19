@@ -78,6 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
     attachEventListeners();
     attachDefaultDayListeners();
     updateAllCalculations();
+    autoFillFromJobTimePage();
 });
 
 // Initialize the table with 5 rows for weekdays
@@ -1043,5 +1044,75 @@ function clearDay(index) {
     
     clearLunchBreakWarning(index);
     updateAllCalculations();
+}
+
+// Auto-fill today's entry/exit fields from the jobtime compilazione page
+function autoFillFromJobTimePage() {
+    if (!chrome || !chrome.tabs || !chrome.scripting) return;
+
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (!tabs || !tabs[0]) return;
+        let parsedUrl;
+        try {
+            parsedUrl = new URL(tabs[0].url || '');
+        } catch (_) {
+            return;
+        }
+        if (parsedUrl.hostname !== 'webapps-sgs.sms-group.com' ||
+            !parsedUrl.pathname.toLowerCase().includes('/jobtime/compilazione.aspx')) return;
+
+        chrome.scripting.executeScript({
+            target: { tabId: tabs[0].id },
+            func: () => {
+                const boxes = document.querySelectorAll('.boxTimb');
+                const entries = [];
+                const exits = [];
+
+                boxes.forEach(box => {
+                    const text = box.textContent.trim();
+                    if (text.includes('Nessuna Timbratura!')) return;
+
+                    const timeMatch = text.match(/\b([01]\d|2[0-3]):[0-5]\d\b/);
+                    if (!timeMatch) return;
+                    const time = timeMatch[0];
+
+                    // Determine entry (E) or exit (U)
+                    const typeMatch = text.match(/\b([EU])\b/i);
+                    if (!typeMatch) return;
+                    const typeChar = typeMatch[1].toUpperCase();
+
+                    if (typeChar === 'E') {
+                        entries.push(time);
+                    } else if (typeChar === 'U') {
+                        exits.push(time);
+                    }
+                });
+
+                return {
+                    entry1: entries[0] || null,
+                    entry2: entries[1] || null,
+                    exit1: exits[0] || null,
+                    exit2: exits[1] || null
+                };
+            }
+        }, (results) => {
+            if (chrome.runtime.lastError || !results || !results[0]) return;
+            const data = results[0].result;
+            if (!data) return;
+
+            // Determine today's row index (0=Monday … 4=Friday)
+            const dayOfWeek = new Date().getDay(); // 0=Sun,1=Mon,...,6=Sat
+            if (dayOfWeek < 1 || dayOfWeek > 5) return;
+            const index = dayOfWeek - 1; // 0=Mon,...,4=Fri
+
+            if (data.entry1) setTimeValue('entry1-hour', 'entry1-minute', index, data.entry1);
+            if (data.exit1) setTimeValue('exit1-hour', 'exit1-minute', index, data.exit1);
+            if (data.entry2) setTimeValue('entry2-hour', 'entry2-minute', index, data.entry2);
+            if (data.exit2) setTimeValue('exit2-hour', 'exit2-minute', index, data.exit2);
+
+            saveToStorage();
+            updateAllCalculations();
+        });
+    });
 }
 
