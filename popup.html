@@ -7,14 +7,112 @@
     <link rel="icon" type="image/png" href="docs/icon.png">
     <link rel="stylesheet" href="docs/styles.css">
     <style>
+        /* Compact extension popup styles (fits within 800×600) */
         body {
             min-width: 700px;
             max-width: 900px;
-            padding: 12px;
+            padding: 5px;
         }
         .container {
             max-width: 100%;
-            padding: 20px;
+            padding: 8px;
+            border-radius: 12px;
+        }
+        header {
+            margin-bottom: 8px;
+        }
+        h1 {
+            font-size: 1.4rem;
+            margin-bottom: 2px;
+        }
+        .subtitle {
+            display: none;
+        }
+        .controls {
+            margin-bottom: 8px;
+        }
+        .btn {
+            padding: 5px 12px;
+            font-size: 0.82rem;
+            border-radius: 7px;
+        }
+        .btn-autofill, .btn-clearday {
+            padding: 2px 5px;
+            font-size: 0.72rem;
+            margin-left: 3px;
+        }
+        .table-wrapper {
+            margin-bottom: 8px;
+        }
+        th {
+            padding: 7px 5px;
+            font-size: 0.78rem;
+        }
+        td {
+            padding: 5px 4px;
+        }
+        .day-cell {
+            min-width: 60px;
+            font-size: 0.78rem;
+        }
+        .hour-input, .minute-input {
+            padding: 4px 2px;
+            width: 32px;
+            font-size: 0.78rem;
+        }
+        .time-input-wrapper {
+            min-width: 80px;
+            gap: 2px;
+        }
+        .time-separator {
+            font-size: 1rem;
+        }
+        .permit-value {
+            min-width: 44px;
+            font-size: 0.82rem;
+        }
+        .diff-cell {
+            font-size: 0.9rem;
+        }
+        .summary {
+            margin-top: 8px;
+        }
+        .summary-card {
+            padding: 8px 24px;
+            border-radius: 10px;
+        }
+        .summary-card h2 {
+            font-size: 0.85rem;
+            margin-bottom: 2px;
+        }
+        .total-value {
+            font-size: 1.7rem;
+            margin: 2px 0;
+        }
+        .total-label {
+            font-size: 0.78rem;
+        }
+        .default-day-section {
+            margin-top: 8px;
+            padding: 8px 10px;
+            border-radius: 10px;
+        }
+        .default-day-section h2 {
+            font-size: 1rem;
+            margin-bottom: 4px;
+        }
+        .section-subtitle {
+            display: none;
+        }
+        .default-table th {
+            padding: 6px 8px;
+            font-size: 0.78rem;
+        }
+        .default-table td {
+            padding: 6px 8px;
+        }
+        .default-day-actions {
+            margin-top: 6px;
         }
     </style>
 </head>
