@@ -3,6 +3,9 @@ const WORK_DAYS = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì'];
 const STANDARD_HOURS = 8 * 60; // 8 hours in minutes
 const THRESHOLD = 5; // 5 minutes threshold
 const PERMIT_STEP = 30; // 30 minutes step for permits
+const MIN_LUNCH_BREAK = 60; // Minimum lunch break in minutes
+const MIN_ENTRY_TIME = '07:30'; // Minimum entry time (earlier doesn't count)
+const MAX_EXIT_TIME = '18:00'; // Maximum exit time (later doesn't count)
 const STORAGE_KEY = 'workTimeData';
 
 // Initialize the application
@@ -36,8 +39,9 @@ function createTableRow(day, index) {
         <td><input type="time" class="entry2" data-index="${index}"></td>
         <td><input type="time" class="exit2" data-index="${index}"></td>
         <td class="permit-cell">
+            <button class="btn btn-secondary remove-permit" data-index="${index}">-</button>
             <button class="btn btn-primary add-permit" data-index="${index}">+</button>
-            <span class="permit-value" data-index="${index}">0 min</span>
+            <span class="permit-value" data-index="${index}">00:00</span>
         </td>
         <td class="diff-cell diff-neutral" data-index="${index}">0</td>
     `;
@@ -73,6 +77,13 @@ function attachEventListeners() {
             addPermitMinutes(index);
         });
     });
+    
+    document.querySelectorAll('.remove-permit').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const index = parseInt(e.target.dataset.index);
+            removePermitMinutes(index);
+        });
+    });
 }
 
 // Add permit minutes (30 min step)
@@ -87,12 +98,28 @@ function addPermitMinutes(index) {
     updateAllCalculations();
 }
 
+// Remove permit minutes (30 min step)
+function removePermitMinutes(index) {
+    const data = getStoredData();
+    const current = data[index]?.permit || 0;
+    data[index] = data[index] || {};
+    data[index].permit = Math.max(0, current - PERMIT_STEP);
+    
+    saveData(data);
+    updatePermitDisplay(index);
+    updateAllCalculations();
+}
+
 // Update permit display
 function updatePermitDisplay(index) {
     const data = getStoredData();
     const permit = data[index]?.permit || 0;
     const permitSpan = document.querySelector(`.permit-value[data-index="${index}"]`);
-    permitSpan.textContent = `${permit} min`;
+    
+    // Convert to HH:MM format
+    const hours = Math.floor(permit / 60);
+    const minutes = permit % 60;
+    permitSpan.textContent = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
 
 // Calculate minutes worked for a day
@@ -118,18 +145,31 @@ function calculateDayMinutes(index) {
     
     let totalMinutes = 0;
     
-    // Calculate first time slot
+    // Calculate first time slot with time boundaries
     if (entry1 && exit1) {
-        totalMinutes += calculateTimeDifference(entry1, exit1);
+        const cappedEntry1 = capTime(entry1, MIN_ENTRY_TIME, MAX_EXIT_TIME, true);
+        const cappedExit1 = capTime(exit1, MIN_ENTRY_TIME, MAX_EXIT_TIME, false);
+        totalMinutes += calculateTimeDifference(cappedEntry1, cappedExit1);
     }
     
     // Calculate second time slot only if both entry2 and exit2 are present
     if (entry2 && exit2) {
-        totalMinutes += calculateTimeDifference(entry2, exit2);
+        const cappedEntry2 = capTime(entry2, MIN_ENTRY_TIME, MAX_EXIT_TIME, true);
+        const cappedExit2 = capTime(exit2, MIN_ENTRY_TIME, MAX_EXIT_TIME, false);
+        totalMinutes += calculateTimeDifference(cappedEntry2, cappedExit2);
     }
     
-    // Subtract permit minutes from total worked minutes
-    totalMinutes -= permit;
+    // Apply minimum lunch break rule (exit1 to entry2)
+    if (exit1 && entry2) {
+        const actualBreak = calculateTimeDifference(exit1, entry2);
+        if (actualBreak < MIN_LUNCH_BREAK) {
+            // Deduct the difference between actual and minimum break
+            totalMinutes -= (MIN_LUNCH_BREAK - actualBreak);
+        }
+    }
+    
+    // Add permit minutes (they count as additional worked minutes)
+    totalMinutes += permit;
     
     // Calculate difference from standard 8 hours
     const diff = totalMinutes - STANDARD_HOURS;
@@ -149,6 +189,32 @@ function calculateTimeDifference(startTime, endTime) {
     const endTotalMin = endHour * 60 + endMin;
     
     return endTotalMin - startTotalMin;
+}
+
+// Cap time within boundaries (7:30 to 18:00)
+function capTime(time, minTime, maxTime, isEntry) {
+    if (!time) return time;
+    
+    const [hour, min] = time.split(':').map(Number);
+    const totalMin = hour * 60 + min;
+    
+    const [minHour, minMin] = minTime.split(':').map(Number);
+    const minTotalMin = minHour * 60 + minMin;
+    
+    const [maxHour, maxMin] = maxTime.split(':').map(Number);
+    const maxTotalMin = maxHour * 60 + maxMin;
+    
+    // For entry times, use max of actual and minimum (early entries count from min time)
+    if (isEntry) {
+        if (totalMin < minTotalMin) return minTime;
+        // Entry times after max time are not capped - they're just after work hours
+        return time;
+    } else {
+        // For exit times, use min of actual and maximum (late exits count only until max time)
+        if (totalMin > maxTotalMin) return maxTime;
+        // Exit times before min time are not capped - they're just before work hours
+        return time;
+    }
 }
 
 // Apply threshold rounding (5 minutes)
@@ -194,8 +260,14 @@ function calculateSuggestedExit2(index) {
     
     if (!entry1 || !exit1 || !entry2) return null;
     
-    // Calculate how many minutes worked in first slot
-    const firstSlotMinutes = calculateTimeDifference(entry1, exit1);
+    // Calculate how many minutes worked in first slot with time boundaries
+    const cappedEntry1 = capTime(entry1, MIN_ENTRY_TIME, MAX_EXIT_TIME, true);
+    const cappedExit1 = capTime(exit1, MIN_ENTRY_TIME, MAX_EXIT_TIME, false);
+    const firstSlotMinutes = calculateTimeDifference(cappedEntry1, cappedExit1);
+    
+    // Calculate lunch break adjustment
+    const actualBreak = calculateTimeDifference(exit1, entry2);
+    const lunchAdjustment = actualBreak < MIN_LUNCH_BREAK ? (MIN_LUNCH_BREAK - actualBreak) : 0;
     
     // Calculate accumulated deficit from previous days only (not including current day)
     let previousDaysDiff = 0;
@@ -204,8 +276,8 @@ function calculateSuggestedExit2(index) {
     }
     
     // We want to reach 0 difference ideally, so calculate needed minutes
-    // Standard hours - first slot - permit + accumulated deficit from previous days
-    let neededMinutes = STANDARD_HOURS - firstSlotMinutes - permit;
+    // Standard hours - first slot + lunch deduction adjustment - permit (which adds to worked time)
+    let neededMinutes = STANDARD_HOURS - firstSlotMinutes + lunchAdjustment - permit;
     
     // If we have a deficit from previous days, we might want to work more
     if (previousDaysDiff < 0) {
@@ -213,17 +285,19 @@ function calculateSuggestedExit2(index) {
     }
     
     // Calculate exit2 time from entry2
-    const [entry2Hour, entry2Min] = entry2.split(':').map(Number);
+    const cappedEntry2 = capTime(entry2, MIN_ENTRY_TIME, MAX_EXIT_TIME, true);
+    const [entry2Hour, entry2Min] = cappedEntry2.split(':').map(Number);
     const entry2TotalMin = entry2Hour * 60 + entry2Min;
     const exit2TotalMin = entry2TotalMin + Math.max(0, neededMinutes);
     
-    // Check if time goes past midnight and cap at 23:59
-    if (exit2TotalMin >= 1440) {
-        return '23:59';
-    }
+    // Cap at MAX_EXIT_TIME
+    const [maxHour, maxMin] = MAX_EXIT_TIME.split(':').map(Number);
+    const maxTotalMin = maxHour * 60 + maxMin;
     
-    const exit2Hour = Math.floor(exit2TotalMin / 60);
-    const exit2Minute = exit2TotalMin % 60;
+    const finalExit2TotalMin = Math.min(exit2TotalMin, maxTotalMin);
+    
+    const exit2Hour = Math.floor(finalExit2TotalMin / 60);
+    const exit2Minute = finalExit2TotalMin % 60;
     
     return `${String(exit2Hour).padStart(2, '0')}:${String(exit2Minute).padStart(2, '0')}`;
 }
