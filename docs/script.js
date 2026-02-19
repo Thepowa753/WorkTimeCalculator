@@ -74,12 +74,14 @@ function formatNumberInput(input, max) {
 document.addEventListener('DOMContentLoaded', () => {
     initializeTable();
     loadFromStorage();
-    loadDefaultDay();
     attachEventListeners();
-    attachDefaultDayListeners();
     attachImportListeners();
     updateAllCalculations();
     autoFillFromJobTimePage();
+    if (document.getElementById('saveDefaultButton')) {
+        loadDefaultDay();
+        attachDefaultDayListeners();
+    }
 });
 
 // Initialize the table with 5 rows for weekdays
@@ -100,7 +102,6 @@ function createTableRow(day, index) {
     tr.innerHTML = `
         <td class="day-cell">
             ${day}
-            <button class="btn-autofill" data-index="${index}" title="Compila con giornata default">⚡</button>
             <button class="btn-clearday" data-index="${index}" title="Cancella giornata">🗑️</button>
         </td>
         <td><input type="checkbox" class="smartworking-check" data-index="${index}"></td>
@@ -211,14 +212,6 @@ function attachEventListeners() {
         button.addEventListener('click', (e) => {
             const index = parseInt(e.target.dataset.index);
             removePermitMinutes(index);
-        });
-    });
-    
-    // Autofill buttons
-    document.querySelectorAll('.btn-autofill').forEach(button => {
-        button.addEventListener('click', (e) => {
-            const index = parseInt(e.target.dataset.index);
-            applyDefaultToDay(index);
         });
     });
     
