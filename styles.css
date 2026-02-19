@@ -87,6 +87,15 @@ h1 {
     background: #e53e3e;
 }
 
+.btn-success {
+    background: var(--success-color);
+    color: white;
+}
+
+.btn-success:hover {
+    background: #38a169;
+}
+
 .btn-primary {
     background: var(--primary-color);
     color: white;

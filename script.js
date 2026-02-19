@@ -46,7 +46,7 @@ function createTableRow(day, index) {
             <button class="btn btn-primary add-permit" data-index="${index}">+</button>
             <span class="permit-value" data-index="${index}">00:00</span>
         </td>
-        <td class="diff-cell diff-neutral" data-index="${index}">0</td>
+        <td class="diff-cell diff-neutral" data-index="${index}">00:00</td>
     `;
     
     return tr;
@@ -56,6 +56,9 @@ function createTableRow(day, index) {
 function attachEventListeners() {
     // Clear button
     document.getElementById('clearButton').addEventListener('click', clearStorage);
+    
+    // Export button
+    document.getElementById('exportButton').addEventListener('click', exportToCSV);
     
     // SmartWorking checkboxes - dedicated listener
     document.querySelectorAll('.smartworking-check').forEach(checkbox => {
@@ -403,7 +406,13 @@ function updateAllCalculations() {
 // Update day difference display
 function updateDayDiffDisplay(index, diff) {
     const cell = document.querySelector(`.diff-cell[data-index="${index}"]`);
-    cell.textContent = diff;
+    
+    // Convert to HH:MM format
+    const sign = diff < 0 ? '-' : '';
+    const absDiff = Math.abs(diff);
+    const hours = Math.floor(absDiff / 60);
+    const minutes = absDiff % 60;
+    cell.textContent = `${sign}${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
     
     // Update styling based on value
     cell.classList.remove('diff-positive', 'diff-negative', 'diff-neutral');
@@ -430,7 +439,12 @@ function updateTotalDisplay() {
     const total = calculateTotalMinutes();
     const totalElement = document.getElementById('totalMinutes');
     
-    totalElement.textContent = total;
+    // Convert to HH:MM format
+    const sign = total < 0 ? '-' : '';
+    const absTotal = Math.abs(total);
+    const hours = Math.floor(absTotal / 60);
+    const minutes = absTotal % 60;
+    totalElement.textContent = `${sign}${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
     
     // Update styling
     totalElement.style.color = total > 0 ? 'var(--success-color)' : 
@@ -509,5 +523,79 @@ function clearStorage() {
         saveData(data);
         
         updateAllCalculations();
+    }
+}
+
+// Export to CSV
+function exportToCSV() {
+    const data = getStoredData();
+    
+    // Prepare CSV content
+    let csvContent = '';
+    
+    // Add header row
+    csvContent += 'Giorno,SmartWorking,Entrata 1,Uscita 1,Entrata 2,Uscita 2,Permesso,Scarto (HH:MM)\n';
+    
+    // Add data rows
+    WORK_DAYS.forEach((day, index) => {
+        const dayData = data[index] || {};
+        const diff = calculateDayMinutes(index);
+        
+        // Format difference as HH:MM
+        const sign = diff < 0 ? '-' : '';
+        const absDiff = Math.abs(diff);
+        const hours = Math.floor(absDiff / 60);
+        const minutes = absDiff % 60;
+        const diffFormatted = `${sign}${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+        
+        // Format permit as HH:MM
+        const permit = dayData.permit || 0;
+        const permitHours = Math.floor(permit / 60);
+        const permitMinutes = permit % 60;
+        const permitFormatted = `${String(permitHours).padStart(2, '0')}:${String(permitMinutes).padStart(2, '0')}`;
+        
+        csvContent += `${day},`;
+        csvContent += `${dayData.smartworking ? 'Sì' : 'No'},`;
+        csvContent += `${dayData.entry1 || ''},`;
+        csvContent += `${dayData.exit1 || ''},`;
+        csvContent += `${dayData.entry2 || ''},`;
+        csvContent += `${dayData.exit2 || ''},`;
+        csvContent += `${permitFormatted},`;
+        csvContent += `${diffFormatted}\n`;
+    });
+    
+    // Add empty row
+    csvContent += '\n';
+    
+    // Add total row
+    const total = calculateTotalMinutes();
+    const sign = total < 0 ? '-' : '';
+    const absTotal = Math.abs(total);
+    const totalHours = Math.floor(absTotal / 60);
+    const totalMinutes = absTotal % 60;
+    const totalFormatted = `${sign}${String(totalHours).padStart(2, '0')}:${String(totalMinutes).padStart(2, '0')}`;
+    
+    csvContent += `TOTALE SCARTO,,,,,,,${totalFormatted}\n`;
+    
+    // Create blob and download link
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    
+    // Generate filename with current date
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const filename = `WorkTime_${dateStr}.csv`;
+    
+    // Create download link
+    if (navigator.msSaveBlob) {
+        // IE 10+
+        navigator.msSaveBlob(blob, filename);
+    } else {
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
 }

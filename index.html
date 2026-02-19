@@ -14,6 +14,7 @@
         </header>
 
         <div class="controls">
+            <button id="exportButton" class="btn btn-success">📊 Esporta CSV</button>
             <button id="clearButton" class="btn btn-danger">🗑️ Pulisci Storage</button>
         </div>
 
@@ -28,7 +29,7 @@
                         <th>Entrata 2</th>
                         <th>Uscita 2</th>
                         <th>Permesso</th>
-                        <th>Scarto (min)</th>
+                        <th>Scarto (HH:MM)</th>
                     </tr>
                 </thead>
                 <tbody id="workTableBody">
@@ -39,9 +40,9 @@
 
         <div class="summary">
             <div class="summary-card">
-                <h2>Totale Minuti</h2>
-                <div id="totalMinutes" class="total-value">0</div>
-                <p class="total-label">minuti di scarto</p>
+                <h2>Totale Scarto</h2>
+                <div id="totalMinutes" class="total-value">00:00</div>
+                <p class="total-label">ore di scarto (HH:MM)</p>
             </div>
         </div>
     </div>
