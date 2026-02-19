@@ -557,6 +557,59 @@ input[type="time"]:disabled {
     }
 }
 
+/* Import Section */
+.import-section {
+    margin-top: 40px;
+    padding: 25px;
+    background: var(--card-bg);
+    border-radius: 15px;
+    box-shadow: var(--shadow);
+    border: 2px solid var(--border-color);
+}
+
+.import-section h2 {
+    font-size: 1.5rem;
+    color: var(--primary-color);
+    margin-bottom: 10px;
+}
+
+#importTextarea {
+    width: 100%;
+    min-height: 120px;
+    padding: 12px;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-family: monospace;
+    background: var(--bg-color);
+    color: var(--text-color);
+    resize: vertical;
+    margin-bottom: 15px;
+    transition: border-color 0.3s ease;
+}
+
+#importTextarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+.import-actions {
+    display: flex;
+    justify-content: center;
+}
+
+@media (max-width: 768px) {
+    .import-section {
+        padding: 20px 15px;
+        margin-top: 30px;
+    }
+
+    .import-section h2 {
+        font-size: 1.3rem;
+    }
+}
+
 /* Default Day Section */
 .default-day-section {
     margin-top: 40px;

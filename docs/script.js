@@ -77,6 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadDefaultDay();
     attachEventListeners();
     attachDefaultDayListeners();
+    attachImportListeners();
     updateAllCalculations();
     autoFillFromJobTimePage();
 });
@@ -1115,4 +1116,91 @@ function autoFillFromJobTimePage() {
         });
     });
 }
+
+// Parse a single line from Job Hour application
+// Supports standard format: E HH:MM:SS   U HH:MM:SS   E HH:MM:SS   U HH:MM:SS
+// And manual format: HH:MM:SS | HH:MM:SS | HH:MM:SS (M) | HH:MM:SS
+function parseJobHourLine(line) {
+    // Standard format: E/U prefix with seconds, separated by whitespace
+    const standardPattern = /E\s+(\d{1,2}:\d{2}):\d{2}\s+U\s+(\d{1,2}:\d{2}):\d{2}\s+E\s+(\d{1,2}:\d{2}):\d{2}\s+U\s+(\d{1,2}:\d{2}):\d{2}/i;
+    const standardMatch = line.match(standardPattern);
+    if (standardMatch) {
+        return {
+            entry1: standardMatch[1],
+            exit1: standardMatch[2],
+            entry2: standardMatch[3],
+            exit2: standardMatch[4]
+        };
+    }
+
+    // Manual format: HH:MM:SS | HH:MM:SS | HH:MM:SS (M) | HH:MM:SS
+    const manualPattern = /(\d{1,2}:\d{2}):\d{2}(?:\s*\([^)]*\))?\s*\|\s*(\d{1,2}:\d{2}):\d{2}(?:\s*\([^)]*\))?\s*\|\s*(\d{1,2}:\d{2}):\d{2}(?:\s*\([^)]*\))?\s*\|\s*(\d{1,2}:\d{2}):\d{2}(?:\s*\([^)]*\))?/;
+    const manualMatch = line.match(manualPattern);
+    if (manualMatch) {
+        return {
+            entry1: manualMatch[1],
+            exit1: manualMatch[2],
+            entry2: manualMatch[3],
+            exit2: manualMatch[4]
+        };
+    }
+
+    return null;
+}
+
+// Import work times from pasted Job Hour application content
+function importFromJobHour() {
+    const textarea = document.getElementById('importTextarea');
+    const text = textarea.value.trim();
+    if (!text) return;
+
+    const lines = text.split('\n');
+    const parsedDays = [];
+
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        const result = parseJobHourLine(trimmed);
+        if (result) {
+            parsedDays.push(result);
+        }
+    }
+
+    if (parsedDays.length === 0) {
+        alert('Nessun dato valido trovato.\n\nFormati supportati:\n- Standard: E 07:25:06   U 12:22:07   E 13:10:00   U 16:32:48\n- Manuale: 07:25:06 | 12:22:07 | 13:10:00 (M) | 16:32:48');
+        return;
+    }
+
+    const data = getStoredData();
+    const count = Math.min(parsedDays.length, WORK_DAYS.length);
+
+    parsedDays.slice(0, count).forEach((dayData, index) => {
+        data[index] = {
+            smartworking: false,
+            entry1: dayData.entry1 || '',
+            exit1: dayData.exit1 || '',
+            entry2: dayData.entry2 || '',
+            exit2: dayData.exit2 || '',
+            permit: data[index]?.permit || 0
+        };
+    });
+
+    saveData(data);
+    loadFromStorage();
+    updateAllCalculations();
+
+    textarea.value = '';
+
+    const importButton = document.getElementById('importButton');
+    const originalText = importButton.textContent;
+    importButton.textContent = `✅ Importati ${count} giorni!`;
+    setTimeout(() => {
+        importButton.textContent = originalText;
+    }, 2000);
+}
+
+function attachImportListeners() {
+    document.getElementById('importButton').addEventListener('click', importFromJobHour);
+}
+
 
