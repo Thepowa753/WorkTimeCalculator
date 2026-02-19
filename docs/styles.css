@@ -277,6 +277,12 @@ input[type="checkbox"] {
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
 }
 
+.hour-input.invalid-time,
+.minute-input.invalid-time {
+    border-color: var(--danger-color);
+    box-shadow: 0 0 0 3px rgba(245, 101, 101, 0.3);
+}
+
 .hour-input:disabled,
 .minute-input:disabled {
     background: #2d3748;
