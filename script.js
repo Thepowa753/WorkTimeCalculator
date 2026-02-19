@@ -5,7 +5,7 @@ const THRESHOLD = 5; // 5 minutes threshold
 const PERMIT_STEP = 30; // 30 minutes step for permits
 const MIN_LUNCH_BREAK = 60; // Minimum lunch break in minutes
 const MIN_ENTRY_TIME = '07:30'; // Minimum entry time (earlier doesn't count)
-const MAX_EXIT_TIME = '18:00'; // Maximum exit time (later doesn't count)
+const MAX_EXIT_TIME = '20:00'; // Maximum exit time (later doesn't count)
 const STORAGE_KEY = 'workTimeData';
 
 // Helper function to format minutes to HH:MM
