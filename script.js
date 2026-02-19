@@ -57,25 +57,28 @@ function attachEventListeners() {
     // Clear button
     document.getElementById('clearButton').addEventListener('click', clearStorage);
     
-    // All inputs that should trigger save and recalculation
-    document.querySelectorAll('input[type="time"], input[type="checkbox"]').forEach(input => {
+    // SmartWorking checkboxes - dedicated listener
+    document.querySelectorAll('.smartworking-check').forEach(checkbox => {
+        checkbox.addEventListener('change', () => {
+            const index = parseInt(checkbox.dataset.index);
+            handleSmartWorkingChange(index, checkbox.checked);
+            saveToStorage();
+            updateAllCalculations();
+        });
+    });
+    
+    // Time inputs
+    document.querySelectorAll('input[type="time"]').forEach(input => {
         input.addEventListener('change', () => {
-            // Handle SmartWorking checkbox changes
-            if (input.type === 'checkbox' && input.classList.contains('smartworking-check')) {
-                const index = parseInt(input.dataset.index);
-                handleSmartWorkingChange(index, input.checked);
-            }
             saveToStorage();
             updateAllCalculations();
         });
         
         // For time inputs, also listen to input event for real-time placeholder update
-        if (input.type === 'time') {
-            input.addEventListener('input', () => {
-                const index = parseInt(input.dataset.index);
-                updateExit2Placeholder(index);
-            });
-        }
+        input.addEventListener('input', () => {
+            const index = parseInt(input.dataset.index);
+            updateExit2Placeholder(index);
+        });
     });
     
     // Permit buttons
@@ -282,10 +285,12 @@ function updateExit2Placeholder(index) {
             exit2Tooltip.textContent = `💡 ${suggestedTime}`;
             exit2Tooltip.classList.add('visible');
         } else {
+            exit2Tooltip.textContent = '';
             exit2Tooltip.classList.remove('visible');
         }
     } else {
         exit2Input.placeholder = '';
+        exit2Tooltip.textContent = '';
         exit2Tooltip.classList.remove('visible');
     }
 }
