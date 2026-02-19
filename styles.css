@@ -196,6 +196,29 @@ td {
     min-width: 80px;
 }
 
+.btn-autofill {
+    margin-left: 8px;
+    padding: 4px 8px;
+    border: none;
+    border-radius: 5px;
+    background: var(--primary-color);
+    color: white;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.btn-autofill:hover {
+    background: var(--secondary-color);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.btn-autofill:active {
+    transform: translateY(0);
+}
+
 input[type="checkbox"] {
     width: 20px;
     height: 20px;

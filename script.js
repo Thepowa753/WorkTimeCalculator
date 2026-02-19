@@ -90,7 +90,10 @@ function createTableRow(day, index) {
     tr.dataset.index = index;
     
     tr.innerHTML = `
-        <td class="day-cell">${day}</td>
+        <td class="day-cell">
+            ${day}
+            <button class="btn-autofill" data-index="${index}" title="Compila con giornata default">⚡</button>
+        </td>
         <td><input type="checkbox" class="smartworking-check" data-index="${index}"></td>
         <td>
             <div class="time-input-wrapper">
@@ -186,6 +189,14 @@ function attachEventListeners() {
         button.addEventListener('click', (e) => {
             const index = parseInt(e.target.dataset.index);
             removePermitMinutes(index);
+        });
+    });
+    
+    // Autofill buttons
+    document.querySelectorAll('.btn-autofill').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const index = parseInt(e.target.dataset.index);
+            applyDefaultToDay(index);
         });
     });
 }
@@ -344,24 +355,67 @@ function updatePermitButtonBlinking(index) {
     const data = getStoredData();
     const dayData = data[index] || {};
     const entry1 = dayData.entry1;
+    const exit1 = dayData.exit1;
+    const entry2 = dayData.entry2;
+    const exit2 = dayData.exit2;
     const permit = dayData.permit || 0;
     const addPermitButton = document.querySelector(`.add-permit[data-index="${index}"]`);
     
-    // Check if entry1 is after 09:00 and no permit has been added
-    if (entry1 && permit === 0) {
-        const [hour, min] = entry1.split(':').map(Number);
-        const entryMinutes = hour * 60 + min;
-        const nineAMMinutes = 9 * 60; // 09:00 in minutes
+    // Only check if no permit has been added
+    if (permit === 0) {
+        let shouldBlink = false;
         
-        if (entryMinutes > nineAMMinutes) {
-            // Entry is after 09:00 and no permit, add blinking class
+        // Check if entry1 is after 09:00
+        if (entry1) {
+            const [hour, min] = entry1.split(':').map(Number);
+            const entryMinutes = hour * 60 + min;
+            const nineAMMinutes = 9 * 60; // 09:00 in minutes
+            
+            if (entryMinutes > nineAMMinutes) {
+                shouldBlink = true;
+            }
+        }
+        
+        // Check if exit1 is before 12:00 and no entry2 or no exit2
+        if (exit1 && (!entry2 || !exit2)) {
+            const [hour, min] = exit1.split(':').map(Number);
+            const exit1Minutes = hour * 60 + min;
+            const noonMinutes = 12 * 60; // 12:00 in minutes
+            
+            if (exit1Minutes < noonMinutes) {
+                shouldBlink = true;
+            }
+        }
+        
+        // Check if entry2 is after 14:30
+        if (entry2) {
+            const [hour, min] = entry2.split(':').map(Number);
+            const entry2Minutes = hour * 60 + min;
+            const maxLunchEndMinutes = 14 * 60 + 30; // 14:30 in minutes
+            
+            if (entry2Minutes > maxLunchEndMinutes) {
+                shouldBlink = true;
+            }
+        }
+        
+        // Check if exit2 is before 16:30
+        if (exit2) {
+            const [hour, min] = exit2.split(':').map(Number);
+            const exit2Minutes = hour * 60 + min;
+            const minExit2Minutes = 16 * 60 + 30; // 16:30 in minutes
+            
+            if (exit2Minutes < minExit2Minutes) {
+                shouldBlink = true;
+            }
+        }
+        
+        if (shouldBlink) {
             addPermitButton.classList.add('blink');
         } else {
-            // Entry is at or before 09:00, remove blinking
             addPermitButton.classList.remove('blink');
         }
     } else {
-        // Either no entry1 or permit has been added, remove blinking
+        // Permit has been added, remove blinking
         addPermitButton.classList.remove('blink');
     }
 }
@@ -696,8 +750,7 @@ function clearStorage() {
             clearLunchBreakWarning(index);
         });
         
-        // Apply default day to week
-        applyDefaultToWeek();
+        // DO NOT apply default day to week - let user use autofill buttons instead
         
         updateAllCalculations();
     }
@@ -866,6 +919,47 @@ function applyDefaultToWeek() {
     
     saveData(weekData);
     loadFromStorage();
+    updateAllCalculations();
+}
+
+function applyDefaultToDay(index) {
+    const defaultData = getDefaultDayData();
+    const data = getStoredData();
+    
+    // Preserve existing permit value before replacing data[index]
+    const existingPermit = data[index]?.permit || 0;
+    
+    // Apply default to the specific day
+    data[index] = {
+        smartworking: false, // Always false when auto-filling
+        entry1: defaultData.entry1 || '',
+        exit1: defaultData.exit1 || '',
+        entry2: defaultData.entry2 || '',
+        exit2: defaultData.exit2 || '',
+        permit: existingPermit // Preserve existing permit value
+    };
+    
+    saveData(data);
+    
+    // Update the UI for this specific day
+    const updateTimeField = (field) => {
+        const hourClass = `${field}-hour`;
+        const minuteClass = `${field}-minute`;
+        setTimeValue(hourClass, minuteClass, index, data[index][field] || '');
+    };
+    
+    updateTimeField('entry1');
+    updateTimeField('exit1');
+    updateTimeField('entry2');
+    updateTimeField('exit2');
+    
+    // Uncheck smartworking
+    const swCheckbox = document.querySelector(`.smartworking-check[data-index="${index}"]`);
+    if (swCheckbox) {
+        swCheckbox.checked = false;
+        handleSmartWorkingChange(index, false);
+    }
+    
     updateAllCalculations();
 }
 
