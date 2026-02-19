@@ -219,6 +219,29 @@ td {
     transform: translateY(0);
 }
 
+.btn-clearday {
+    margin-left: 4px;
+    padding: 4px 8px;
+    border: none;
+    border-radius: 5px;
+    background: var(--danger-color);
+    color: white;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.btn-clearday:hover {
+    background: #e53e3e;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.btn-clearday:active {
+    transform: translateY(0);
+}
+
 input[type="checkbox"] {
     width: 20px;
     height: 20px;
