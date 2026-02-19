@@ -46,11 +46,11 @@ function createTableRow(day, index) {
     tr.innerHTML = `
         <td class="day-cell">${day}</td>
         <td><input type="checkbox" class="smartworking-check" data-index="${index}"></td>
-        <td><input type="time" class="entry1" data-index="${index}" step="300" pattern="[0-9]{2}:[0-9]{2}"></td>
-        <td><input type="time" class="exit1" data-index="${index}" step="300" pattern="[0-9]{2}:[0-9]{2}"></td>
-        <td><input type="time" class="entry2" data-index="${index}" step="300" pattern="[0-9]{2}:[0-9]{2}"></td>
+        <td><input type="text" class="entry1" data-index="${index}" placeholder="HH:MM" pattern="[0-9]{2}:[0-9]{2}"></td>
+        <td><input type="text" class="exit1" data-index="${index}" placeholder="HH:MM" pattern="[0-9]{2}:[0-9]{2}"></td>
+        <td><input type="text" class="entry2" data-index="${index}" placeholder="HH:MM" pattern="[0-9]{2}:[0-9]{2}"></td>
         <td class="exit2-cell">
-            <input type="time" class="exit2" data-index="${index}" step="300" pattern="[0-9]{2}:[0-9]{2}">
+            <input type="text" class="exit2" data-index="${index}" placeholder="HH:MM" pattern="[0-9]{2}:[0-9]{2}">
             <span class="exit2-tooltip" data-index="${index}"></span>
         </td>
         <td class="permit-cell">
@@ -82,8 +82,9 @@ function attachEventListeners() {
         });
     });
     
-    // Time inputs
-    document.querySelectorAll('input[type="time"]').forEach(input => {
+    // Time inputs - only in the main work table
+    const workTableInputs = document.querySelectorAll('#workTableBody input[type="text"]');
+    workTableInputs.forEach(input => {
         input.addEventListener('change', () => {
             saveToStorage();
             updateAllCalculations();
@@ -92,7 +93,9 @@ function attachEventListeners() {
         // For time inputs, also listen to input event for real-time placeholder update
         input.addEventListener('input', () => {
             const index = parseInt(input.dataset.index);
-            updateExit2Placeholder(index);
+            if (!isNaN(index)) {
+                updateExit2Placeholder(index);
+            }
         });
     });
     
@@ -519,16 +522,17 @@ function clearStorage() {
         // Clear week data only, not default day
         localStorage.removeItem(STORAGE_KEY);
         
-        // Clear all inputs
-        document.querySelectorAll('input[type="time"]').forEach(input => {
-            if (!input.id.startsWith('default')) {
-                input.value = '';
-            }
+        // Clear all time inputs in work table and re-enable editing
+        const workTableInputs = document.querySelectorAll('#workTableBody input[type="text"]');
+        workTableInputs.forEach(input => {
+            input.value = '';
+            input.disabled = false; // Re-enable all time inputs
         });
-        document.querySelectorAll('input[type="checkbox"]').forEach(input => {
-            if (!input.id.startsWith('default')) {
-                input.checked = false;
-            }
+        
+        // Uncheck all smartworking checkboxes in work table
+        const workTableCheckboxes = document.querySelectorAll('#workTableBody input[type="checkbox"]');
+        workTableCheckboxes.forEach(checkbox => {
+            checkbox.checked = false;
         });
         
         // Apply default day to week
@@ -612,10 +616,6 @@ function saveDefaultDayData(data) {
 function loadDefaultDay() {
     const data = getDefaultDayData();
     
-    if (data.smartworking !== undefined) {
-        document.getElementById('defaultSmartworking').checked = data.smartworking;
-        handleDefaultSmartWorkingChange(data.smartworking);
-    }
     if (data.entry1) {
         document.getElementById('defaultEntry1').value = data.entry1;
     }
@@ -628,106 +628,41 @@ function loadDefaultDay() {
     if (data.exit2) {
         document.getElementById('defaultExit2').value = data.exit2;
     }
-    
-    updateDefaultPermitDisplay();
 }
 
 function saveDefaultDay() {
     const data = {
-        smartworking: document.getElementById('defaultSmartworking').checked,
         entry1: document.getElementById('defaultEntry1').value,
         exit1: document.getElementById('defaultExit1').value,
         entry2: document.getElementById('defaultEntry2').value,
-        exit2: document.getElementById('defaultExit2').value,
-        permit: getDefaultDayData().permit || 0
+        exit2: document.getElementById('defaultExit2').value
     };
     
     saveDefaultDayData(data);
 }
 
-function handleDefaultSmartWorkingChange(isChecked) {
-    const entry1 = document.getElementById('defaultEntry1');
-    const exit1 = document.getElementById('defaultExit1');
-    const entry2 = document.getElementById('defaultEntry2');
-    const exit2 = document.getElementById('defaultExit2');
-    
-    if (isChecked) {
-        entry1.value = '';
-        exit1.value = '';
-        entry2.value = '';
-        exit2.value = '';
-        entry1.disabled = true;
-        exit1.disabled = true;
-        entry2.disabled = true;
-        exit2.disabled = true;
-    } else {
-        entry1.disabled = false;
-        exit1.disabled = false;
-        entry2.disabled = false;
-        exit2.disabled = false;
-    }
-}
-
-function addDefaultPermitMinutes() {
-    const data = getDefaultDayData();
-    const current = data.permit || 0;
-    data.permit = current + PERMIT_STEP;
-    
-    saveDefaultDayData(data);
-    updateDefaultPermitDisplay();
-}
-
-function removeDefaultPermitMinutes() {
-    const data = getDefaultDayData();
-    const current = data.permit || 0;
-    data.permit = Math.max(0, current - PERMIT_STEP);
-    
-    saveDefaultDayData(data);
-    updateDefaultPermitDisplay();
-}
-
-function updateDefaultPermitDisplay() {
-    const data = getDefaultDayData();
-    const permit = data.permit || 0;
-    const permitSpan = document.getElementById('defaultPermitValue');
-    
-    const hours = Math.floor(permit / 60);
-    const minutes = permit % 60;
-    permitSpan.textContent = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-}
-
 function attachDefaultDayListeners() {
-    // SmartWorking checkbox
-    document.getElementById('defaultSmartworking').addEventListener('change', (e) => {
-        handleDefaultSmartWorkingChange(e.target.checked);
-        saveDefaultDay();
-    });
-    
     // Time inputs
     ['defaultEntry1', 'defaultExit1', 'defaultEntry2', 'defaultExit2'].forEach(id => {
         document.getElementById(id).addEventListener('change', () => {
             saveDefaultDay();
         });
     });
-    
-    // Permit buttons
-    document.getElementById('defaultAddPermit').addEventListener('click', addDefaultPermitMinutes);
-    document.getElementById('defaultRemovePermit').addEventListener('click', removeDefaultPermitMinutes);
 }
 
 function applyDefaultToWeek() {
     const defaultData = getDefaultDayData();
     const weekData = {};
     
-    // Apply default to all days
+    // Apply default to all days (without smartworking and permit)
     WORK_DAYS.forEach((_, index) => {
         weekData[index] = {
-            smartworking: defaultData.smartworking || false,
+            smartworking: false, // Always false when resetting
             entry1: defaultData.entry1 || '',
             exit1: defaultData.exit1 || '',
             entry2: defaultData.entry2 || '',
             exit2: defaultData.exit2 || '',
-            permit: defaultData.permit || 0
+            permit: 0 // Always 0 when resetting
         };
     });
     
