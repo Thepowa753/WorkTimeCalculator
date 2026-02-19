@@ -358,8 +358,8 @@ function calculateSuggestedExit2(index) {
     let neededMinutes = STANDARD_HOURS - firstSlotMinutes + lunchAdjustment - permit;
     
     // Account for previous days' accumulated minutes
-    // If we have surplus minutes (positive), we can leave earlier
-    // If we have deficit minutes (negative), we need to work more
+    // previousDaysDiff > 0: surplus (worked extra) - subtract to leave earlier
+    // previousDaysDiff < 0: deficit (worked less) - subtract negative (adds) to work more
     neededMinutes -= previousDaysDiff;
     
     // Calculate exit2 time from entry2
