@@ -10,12 +10,13 @@
     --success-color: #48bb78;
     --danger-color: #f56565;
     --warning-color: #ed8936;
-    --bg-color: #f7fafc;
-    --card-bg: #ffffff;
-    --text-color: #2d3748;
-    --border-color: #e2e8f0;
-    --shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
-    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+    --bg-color: #2d3748;
+    --card-bg: #1a202c;
+    --text-color: #e2e8f0;
+    --text-secondary: #a0aec0;
+    --border-color: #4a5568;
+    --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
 }
 
 body {
@@ -50,7 +51,7 @@ h1 {
 }
 
 .subtitle {
-    color: #718096;
+    color: var(--text-secondary);
     font-size: 1rem;
 }
 
@@ -97,6 +98,17 @@ h1 {
     background: #5a67d8;
 }
 
+.btn-secondary {
+    background: #718096;
+    color: white;
+    padding: 8px 16px;
+    font-size: 0.9rem;
+}
+
+.btn-secondary:hover {
+    background: #4a5568;
+}
+
 .table-wrapper {
     overflow-x: auto;
     margin-bottom: 30px;
@@ -108,7 +120,7 @@ table {
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
-    background: white;
+    background: var(--card-bg);
 }
 
 thead {
@@ -138,7 +150,7 @@ tbody tr {
 }
 
 tbody tr:hover {
-    background: #f7fafc;
+    background: #2d3748;
 }
 
 tbody tr:last-child td:first-child {
@@ -174,16 +186,18 @@ input[type="time"] {
     width: 100%;
     min-width: 110px;
     transition: border-color 0.3s ease;
+    background: var(--card-bg);
+    color: var(--text-color);
 }
 
 input[type="time"]:focus {
     outline: none;
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
 }
 
 input[type="time"]:disabled {
-    background: #f7fafc;
+    background: #2d3748;
     cursor: not-allowed;
 }
 
@@ -214,7 +228,7 @@ input[type="time"]:disabled {
 }
 
 .diff-neutral {
-    color: #718096;
+    color: var(--text-secondary);
 }
 
 .summary {
