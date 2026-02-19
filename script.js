@@ -8,6 +8,15 @@ const MIN_ENTRY_TIME = '07:30'; // Minimum entry time (earlier doesn't count)
 const MAX_EXIT_TIME = '18:00'; // Maximum exit time (later doesn't count)
 const STORAGE_KEY = 'workTimeData';
 
+// Helper function to format minutes to HH:MM
+function formatMinutesToHHMM(minutes) {
+    const sign = minutes < 0 ? '-' : '';
+    const absMinutes = Math.abs(minutes);
+    const hours = Math.floor(absMinutes / 60);
+    const mins = absMinutes % 60;
+    return `${sign}${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+}
+
 // Initialize the application
 document.addEventListener('DOMContentLoaded', () => {
     initializeTable();
@@ -407,12 +416,8 @@ function updateAllCalculations() {
 function updateDayDiffDisplay(index, diff) {
     const cell = document.querySelector(`.diff-cell[data-index="${index}"]`);
     
-    // Convert to HH:MM format
-    const sign = diff < 0 ? '-' : '';
-    const absDiff = Math.abs(diff);
-    const hours = Math.floor(absDiff / 60);
-    const minutes = absDiff % 60;
-    cell.textContent = `${sign}${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    // Convert to HH:MM format using helper
+    cell.textContent = formatMinutesToHHMM(diff);
     
     // Update styling based on value
     cell.classList.remove('diff-positive', 'diff-negative', 'diff-neutral');
@@ -439,12 +444,8 @@ function updateTotalDisplay() {
     const total = calculateTotalMinutes();
     const totalElement = document.getElementById('totalMinutes');
     
-    // Convert to HH:MM format
-    const sign = total < 0 ? '-' : '';
-    const absTotal = Math.abs(total);
-    const hours = Math.floor(absTotal / 60);
-    const minutes = absTotal % 60;
-    totalElement.textContent = `${sign}${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    // Convert to HH:MM format using helper
+    totalElement.textContent = formatMinutesToHHMM(total);
     
     // Update styling
     totalElement.style.color = total > 0 ? 'var(--success-color)' : 
@@ -541,18 +542,9 @@ function exportToCSV() {
         const dayData = data[index] || {};
         const diff = calculateDayMinutes(index);
         
-        // Format difference as HH:MM
-        const sign = diff < 0 ? '-' : '';
-        const absDiff = Math.abs(diff);
-        const hours = Math.floor(absDiff / 60);
-        const minutes = absDiff % 60;
-        const diffFormatted = `${sign}${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-        
-        // Format permit as HH:MM
-        const permit = dayData.permit || 0;
-        const permitHours = Math.floor(permit / 60);
-        const permitMinutes = permit % 60;
-        const permitFormatted = `${String(permitHours).padStart(2, '0')}:${String(permitMinutes).padStart(2, '0')}`;
+        // Format difference and permit as HH:MM using helper
+        const diffFormatted = formatMinutesToHHMM(diff);
+        const permitFormatted = formatMinutesToHHMM(dayData.permit || 0);
         
         csvContent += `${day},`;
         csvContent += `${dayData.smartworking ? 'Sì' : 'No'},`;
@@ -569,11 +561,7 @@ function exportToCSV() {
     
     // Add total row
     const total = calculateTotalMinutes();
-    const sign = total < 0 ? '-' : '';
-    const absTotal = Math.abs(total);
-    const totalHours = Math.floor(absTotal / 60);
-    const totalMinutes = absTotal % 60;
-    const totalFormatted = `${sign}${String(totalHours).padStart(2, '0')}:${String(totalMinutes).padStart(2, '0')}`;
+    const totalFormatted = formatMinutesToHHMM(total);
     
     csvContent += `TOTALE SCARTO,,,,,,,${totalFormatted}\n`;
     
