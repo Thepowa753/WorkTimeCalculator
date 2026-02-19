@@ -197,16 +197,19 @@ function calculateSuggestedExit2(index) {
     // Calculate how many minutes worked in first slot
     const firstSlotMinutes = calculateTimeDifference(entry1, exit1);
     
-    // Calculate total minutes needed (considering accumulated difference)
-    const totalDiff = calculateTotalMinutes();
+    // Calculate accumulated deficit from previous days only (not including current day)
+    let previousDaysDiff = 0;
+    for (let i = 0; i < index; i++) {
+        previousDaysDiff += calculateDayMinutes(i);
+    }
     
     // We want to reach 0 difference ideally, so calculate needed minutes
-    // Standard hours - first slot - permit + accumulated deficit
+    // Standard hours - first slot - permit + accumulated deficit from previous days
     let neededMinutes = STANDARD_HOURS - firstSlotMinutes - permit;
     
-    // If we have a deficit (negative totalDiff), we might want to work more
-    if (totalDiff < 0) {
-        neededMinutes += Math.abs(totalDiff);
+    // If we have a deficit from previous days, we might want to work more
+    if (previousDaysDiff < 0) {
+        neededMinutes += Math.abs(previousDaysDiff);
     }
     
     // Calculate exit2 time from entry2
@@ -214,7 +217,12 @@ function calculateSuggestedExit2(index) {
     const entry2TotalMin = entry2Hour * 60 + entry2Min;
     const exit2TotalMin = entry2TotalMin + Math.max(0, neededMinutes);
     
-    const exit2Hour = Math.floor(exit2TotalMin / 60) % 24;
+    // Check if time goes past midnight and cap at 23:59
+    if (exit2TotalMin >= 1440) {
+        return '23:59';
+    }
+    
+    const exit2Hour = Math.floor(exit2TotalMin / 60);
     const exit2Minute = exit2TotalMin % 60;
     
     return `${String(exit2Hour).padStart(2, '0')}:${String(exit2Minute).padStart(2, '0')}`;
@@ -281,6 +289,7 @@ function saveData(data) {
 
 function saveToStorage() {
     const data = {};
+    const existingData = getStoredData();
     
     WORK_DAYS.forEach((_, index) => {
         data[index] = {
@@ -289,7 +298,7 @@ function saveToStorage() {
             exit1: document.querySelector(`.exit1[data-index="${index}"]`).value,
             entry2: document.querySelector(`.entry2[data-index="${index}"]`).value,
             exit2: document.querySelector(`.exit2[data-index="${index}"]`).value,
-            permit: data[index]?.permit || (getStoredData()[index]?.permit || 0)
+            permit: existingData[index]?.permit || 0
         };
     });
     
