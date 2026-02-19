@@ -18,6 +18,52 @@ function formatMinutesToHHMM(minutes) {
     return `${sign}${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
 }
 
+// Helper function to get time value from hour/minute inputs
+function getTimeValue(hourClass, minuteClass, index) {
+    const hourInput = document.querySelector(`.${hourClass}[data-index="${index}"]`);
+    const minuteInput = document.querySelector(`.${minuteClass}[data-index="${index}"]`);
+    
+    if (!hourInput || !minuteInput) return '';
+    
+    const hour = hourInput.value;
+    const minute = minuteInput.value;
+    
+    if (!hour || !minute) return '';
+    
+    // Pad with zeros
+    return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+}
+
+// Helper function to set time value to hour/minute inputs
+function setTimeValue(hourClass, minuteClass, index, timeValue) {
+    const hourInput = document.querySelector(`.${hourClass}[data-index="${index}"]`);
+    const minuteInput = document.querySelector(`.${minuteClass}[data-index="${index}"]`);
+    
+    if (!hourInput || !minuteInput) return;
+    
+    if (!timeValue) {
+        hourInput.value = '';
+        minuteInput.value = '';
+        return;
+    }
+    
+    const [hour, minute] = timeValue.split(':');
+    hourInput.value = hour;
+    minuteInput.value = minute;
+}
+
+// Helper function to validate and format number input (2 digits)
+function formatNumberInput(input, max) {
+    let value = parseInt(input.value) || 0;
+    
+    // Clamp value within range
+    if (value < 0) value = 0;
+    if (value > max) value = max;
+    
+    input.value = String(value).padStart(2, '0');
+}
+
+
 // Initialize the application
 document.addEventListener('DOMContentLoaded', () => {
     initializeTable();
@@ -46,11 +92,33 @@ function createTableRow(day, index) {
     tr.innerHTML = `
         <td class="day-cell">${day}</td>
         <td><input type="checkbox" class="smartworking-check" data-index="${index}"></td>
-        <td><input type="text" class="entry1" data-index="${index}" placeholder="HH:MM" pattern="[0-9]{2}:[0-9]{2}"></td>
-        <td><input type="text" class="exit1" data-index="${index}" placeholder="HH:MM" pattern="[0-9]{2}:[0-9]{2}"></td>
-        <td><input type="text" class="entry2" data-index="${index}" placeholder="HH:MM" pattern="[0-9]{2}:[0-9]{2}"></td>
+        <td>
+            <div class="time-input-wrapper">
+                <input type="number" class="hour-input entry1-hour" data-index="${index}" min="0" max="24" placeholder="00">
+                <span class="time-separator">:</span>
+                <input type="number" class="minute-input entry1-minute" data-index="${index}" min="0" max="59" placeholder="00">
+            </div>
+        </td>
+        <td>
+            <div class="time-input-wrapper">
+                <input type="number" class="hour-input exit1-hour" data-index="${index}" min="0" max="24" placeholder="00">
+                <span class="time-separator">:</span>
+                <input type="number" class="minute-input exit1-minute" data-index="${index}" min="0" max="59" placeholder="00">
+            </div>
+        </td>
+        <td>
+            <div class="time-input-wrapper">
+                <input type="number" class="hour-input entry2-hour" data-index="${index}" min="0" max="24" placeholder="00">
+                <span class="time-separator">:</span>
+                <input type="number" class="minute-input entry2-minute" data-index="${index}" min="0" max="59" placeholder="00">
+            </div>
+        </td>
         <td class="exit2-cell">
-            <input type="text" class="exit2" data-index="${index}" placeholder="HH:MM" pattern="[0-9]{2}:[0-9]{2}">
+            <div class="time-input-wrapper">
+                <input type="number" class="hour-input exit2-hour" data-index="${index}" min="0" max="24" placeholder="00">
+                <span class="time-separator">:</span>
+                <input type="number" class="minute-input exit2-minute" data-index="${index}" min="0" max="59" placeholder="00">
+            </div>
             <span class="exit2-tooltip" data-index="${index}"></span>
         </td>
         <td class="permit-cell">
@@ -82,9 +150,15 @@ function attachEventListeners() {
         });
     });
     
-    // Time inputs - only in the main work table
-    const workTableInputs = document.querySelectorAll('#workTableBody input[type="text"]');
+    // Time inputs - hour and minute inputs in the main work table
+    const workTableInputs = document.querySelectorAll('#workTableBody input[type="number"]');
     workTableInputs.forEach(input => {
+        // Format on blur
+        input.addEventListener('blur', () => {
+            const max = input.classList.contains('hour-input') ? 24 : 59;
+            formatNumberInput(input, max);
+        });
+        
         input.addEventListener('change', () => {
             saveToStorage();
             updateAllCalculations();
@@ -95,6 +169,7 @@ function attachEventListeners() {
             const index = parseInt(input.dataset.index);
             if (!isNaN(index)) {
                 updateExit2Placeholder(index);
+                validateLunchBreak(index);
             }
         });
     });
@@ -117,29 +192,110 @@ function attachEventListeners() {
 
 // Handle SmartWorking checkbox change
 function handleSmartWorkingChange(index, isChecked) {
-    const entry1Input = document.querySelector(`.entry1[data-index="${index}"]`);
-    const exit1Input = document.querySelector(`.exit1[data-index="${index}"]`);
-    const entry2Input = document.querySelector(`.entry2[data-index="${index}"]`);
-    const exit2Input = document.querySelector(`.exit2[data-index="${index}"]`);
+    const entry1Hour = document.querySelector(`.entry1-hour[data-index="${index}"]`);
+    const entry1Minute = document.querySelector(`.entry1-minute[data-index="${index}"]`);
+    const exit1Hour = document.querySelector(`.exit1-hour[data-index="${index}"]`);
+    const exit1Minute = document.querySelector(`.exit1-minute[data-index="${index}"]`);
+    const entry2Hour = document.querySelector(`.entry2-hour[data-index="${index}"]`);
+    const entry2Minute = document.querySelector(`.entry2-minute[data-index="${index}"]`);
+    const exit2Hour = document.querySelector(`.exit2-hour[data-index="${index}"]`);
+    const exit2Minute = document.querySelector(`.exit2-minute[data-index="${index}"]`);
     
     if (isChecked) {
         // Clear all time fields
-        entry1Input.value = '';
-        exit1Input.value = '';
-        entry2Input.value = '';
-        exit2Input.value = '';
+        [entry1Hour, entry1Minute, exit1Hour, exit1Minute, entry2Hour, entry2Minute, exit2Hour, exit2Minute].forEach(input => {
+            if (input) input.value = '';
+        });
         
         // Disable all time fields
-        entry1Input.disabled = true;
-        exit1Input.disabled = true;
-        entry2Input.disabled = true;
-        exit2Input.disabled = true;
+        [entry1Hour, entry1Minute, exit1Hour, exit1Minute, entry2Hour, entry2Minute, exit2Hour, exit2Minute].forEach(input => {
+            if (input) input.disabled = true;
+        });
     } else {
         // Re-enable all time fields
-        entry1Input.disabled = false;
-        exit1Input.disabled = false;
-        entry2Input.disabled = false;
-        exit2Input.disabled = false;
+        [entry1Hour, entry1Minute, exit1Hour, exit1Minute, entry2Hour, entry2Minute, exit2Hour, exit2Minute].forEach(input => {
+            if (input) input.disabled = false;
+        });
+    }
+}
+
+// Validate lunch break timing (12:00 - 14:30)
+function validateLunchBreak(index) {
+    const exit1 = getTimeValue('exit1-hour', 'exit1-minute', index);
+    const entry2 = getTimeValue('entry2-hour', 'entry2-minute', index);
+    
+    if (!exit1 || !entry2) {
+        // Clear any previous warnings
+        clearLunchBreakWarning(index);
+        return;
+    }
+    
+    const [exit1Hour, exit1Min] = exit1.split(':').map(Number);
+    const [entry2Hour, entry2Min] = entry2.split(':').map(Number);
+    
+    const exit1Minutes = exit1Hour * 60 + exit1Min;
+    const entry2Minutes = entry2Hour * 60 + entry2Min;
+    
+    const minLunchStart = 12 * 60; // 12:00
+    const maxLunchEnd = 14 * 60 + 30; // 14:30
+    
+    let warning = '';
+    
+    if (exit1Minutes < minLunchStart) {
+        warning = '⚠️ Uscita 1 prima delle 12:00';
+    } else if (entry2Minutes > maxLunchEnd) {
+        warning = '⚠️ Entrata 2 dopo le 14:30';
+    }
+    
+    if (warning) {
+        showLunchBreakWarning(index, warning);
+    } else {
+        clearLunchBreakWarning(index);
+    }
+}
+
+// Show lunch break warning
+function showLunchBreakWarning(index, message) {
+    // Find or create warning element
+    let warningEl = document.querySelector(`.lunch-warning[data-index="${index}"]`);
+    
+    if (!warningEl) {
+        const row = document.querySelector(`tr[data-index="${index}"]`);
+        if (!row) return;
+        
+        warningEl = document.createElement('div');
+        warningEl.className = 'lunch-warning';
+        warningEl.dataset.index = index;
+        
+        // Insert after the row
+        const parentTable = row.parentElement;
+        const nextRow = row.nextElementSibling;
+        
+        const warningRow = document.createElement('tr');
+        warningRow.className = 'lunch-warning-row';
+        warningRow.dataset.index = index;
+        
+        const warningCell = document.createElement('td');
+        warningCell.colSpan = 8;
+        warningCell.appendChild(warningEl);
+        warningRow.appendChild(warningCell);
+        
+        if (nextRow) {
+            parentTable.insertBefore(warningRow, nextRow);
+        } else {
+            parentTable.appendChild(warningRow);
+        }
+    }
+    
+    warningEl.textContent = message;
+    warningEl.style.display = 'block';
+}
+
+// Clear lunch break warning
+function clearLunchBreakWarning(index) {
+    const warningRow = document.querySelector(`.lunch-warning-row[data-index="${index}"]`);
+    if (warningRow) {
+        warningRow.remove();
     }
 }
 
@@ -478,10 +634,10 @@ function saveToStorage() {
     WORK_DAYS.forEach((_, index) => {
         data[index] = {
             smartworking: document.querySelector(`.smartworking-check[data-index="${index}"]`).checked,
-            entry1: document.querySelector(`.entry1[data-index="${index}"]`).value,
-            exit1: document.querySelector(`.exit1[data-index="${index}"]`).value,
-            entry2: document.querySelector(`.entry2[data-index="${index}"]`).value,
-            exit2: document.querySelector(`.exit2[data-index="${index}"]`).value,
+            entry1: getTimeValue('entry1-hour', 'entry1-minute', index),
+            exit1: getTimeValue('exit1-hour', 'exit1-minute', index),
+            entry2: getTimeValue('entry2-hour', 'entry2-minute', index),
+            exit2: getTimeValue('exit2-hour', 'exit2-minute', index),
             permit: existingData[index]?.permit || 0
         };
     });
@@ -501,16 +657,16 @@ function loadFromStorage() {
             handleSmartWorkingChange(index, dayData.smartworking);
         }
         if (dayData.entry1) {
-            document.querySelector(`.entry1[data-index="${index}"]`).value = dayData.entry1;
+            setTimeValue('entry1-hour', 'entry1-minute', index, dayData.entry1);
         }
         if (dayData.exit1) {
-            document.querySelector(`.exit1[data-index="${index}"]`).value = dayData.exit1;
+            setTimeValue('exit1-hour', 'exit1-minute', index, dayData.exit1);
         }
         if (dayData.entry2) {
-            document.querySelector(`.entry2[data-index="${index}"]`).value = dayData.entry2;
+            setTimeValue('entry2-hour', 'entry2-minute', index, dayData.entry2);
         }
         if (dayData.exit2) {
-            document.querySelector(`.exit2[data-index="${index}"]`).value = dayData.exit2;
+            setTimeValue('exit2-hour', 'exit2-minute', index, dayData.exit2);
         }
         
         updatePermitDisplay(index);
@@ -523,7 +679,7 @@ function clearStorage() {
         localStorage.removeItem(STORAGE_KEY);
         
         // Clear all time inputs in work table and re-enable editing
-        const workTableInputs = document.querySelectorAll('#workTableBody input[type="text"]');
+        const workTableInputs = document.querySelectorAll('#workTableBody input[type="number"]');
         workTableInputs.forEach(input => {
             input.value = '';
             input.disabled = false; // Re-enable all time inputs
@@ -533,6 +689,11 @@ function clearStorage() {
         const workTableCheckboxes = document.querySelectorAll('#workTableBody input[type="checkbox"]');
         workTableCheckboxes.forEach(checkbox => {
             checkbox.checked = false;
+        });
+        
+        // Clear any lunch break warnings
+        WORK_DAYS.forEach((_, index) => {
+            clearLunchBreakWarning(index);
         });
         
         // Apply default day to week
@@ -616,36 +777,73 @@ function saveDefaultDayData(data) {
 function loadDefaultDay() {
     const data = getDefaultDayData();
     
-    if (data.entry1) {
-        document.getElementById('defaultEntry1').value = data.entry1;
+    if (data.entry1 && data.entry1.includes(':')) {
+        const [hour, minute] = data.entry1.split(':');
+        document.getElementById('defaultEntry1Hour').value = hour;
+        document.getElementById('defaultEntry1Minute').value = minute;
     }
-    if (data.exit1) {
-        document.getElementById('defaultExit1').value = data.exit1;
+    if (data.exit1 && data.exit1.includes(':')) {
+        const [hour, minute] = data.exit1.split(':');
+        document.getElementById('defaultExit1Hour').value = hour;
+        document.getElementById('defaultExit1Minute').value = minute;
     }
-    if (data.entry2) {
-        document.getElementById('defaultEntry2').value = data.entry2;
+    if (data.entry2 && data.entry2.includes(':')) {
+        const [hour, minute] = data.entry2.split(':');
+        document.getElementById('defaultEntry2Hour').value = hour;
+        document.getElementById('defaultEntry2Minute').value = minute;
     }
-    if (data.exit2) {
-        document.getElementById('defaultExit2').value = data.exit2;
+    if (data.exit2 && data.exit2.includes(':')) {
+        const [hour, minute] = data.exit2.split(':');
+        document.getElementById('defaultExit2Hour').value = hour;
+        document.getElementById('defaultExit2Minute').value = minute;
     }
 }
 
 function saveDefaultDay() {
+    const entry1Hour = document.getElementById('defaultEntry1Hour').value;
+    const entry1Minute = document.getElementById('defaultEntry1Minute').value;
+    const exit1Hour = document.getElementById('defaultExit1Hour').value;
+    const exit1Minute = document.getElementById('defaultExit1Minute').value;
+    const entry2Hour = document.getElementById('defaultEntry2Hour').value;
+    const entry2Minute = document.getElementById('defaultEntry2Minute').value;
+    const exit2Hour = document.getElementById('defaultExit2Hour').value;
+    const exit2Minute = document.getElementById('defaultExit2Minute').value;
+    
     const data = {
-        entry1: document.getElementById('defaultEntry1').value,
-        exit1: document.getElementById('defaultExit1').value,
-        entry2: document.getElementById('defaultEntry2').value,
-        exit2: document.getElementById('defaultExit2').value
+        entry1: (entry1Hour && entry1Minute) ? `${String(entry1Hour).padStart(2, '0')}:${String(entry1Minute).padStart(2, '0')}` : '',
+        exit1: (exit1Hour && exit1Minute) ? `${String(exit1Hour).padStart(2, '0')}:${String(exit1Minute).padStart(2, '0')}` : '',
+        entry2: (entry2Hour && entry2Minute) ? `${String(entry2Hour).padStart(2, '0')}:${String(entry2Minute).padStart(2, '0')}` : '',
+        exit2: (exit2Hour && exit2Minute) ? `${String(exit2Hour).padStart(2, '0')}:${String(exit2Minute).padStart(2, '0')}` : ''
     };
     
     saveDefaultDayData(data);
+    
+    // Show save confirmation
+    const saveButton = document.getElementById('saveDefaultButton');
+    const originalText = saveButton.textContent;
+    saveButton.textContent = '✅ Salvato!';
+    saveButton.classList.add('saved');
+    
+    setTimeout(() => {
+        saveButton.textContent = originalText;
+        saveButton.classList.remove('saved');
+    }, 2000);
 }
 
 function attachDefaultDayListeners() {
-    // Time inputs
-    ['defaultEntry1', 'defaultExit1', 'defaultEntry2', 'defaultExit2'].forEach(id => {
-        document.getElementById(id).addEventListener('change', () => {
-            saveDefaultDay();
+    // Save button
+    document.getElementById('saveDefaultButton').addEventListener('click', saveDefaultDay);
+    
+    // Format inputs on blur
+    ['defaultEntry1Hour', 'defaultExit1Hour', 'defaultEntry2Hour', 'defaultExit2Hour'].forEach(id => {
+        document.getElementById(id).addEventListener('blur', (e) => {
+            formatNumberInput(e.target, 24);
+        });
+    });
+    
+    ['defaultEntry1Minute', 'defaultExit1Minute', 'defaultEntry2Minute', 'defaultExit2Minute'].forEach(id => {
+        document.getElementById(id).addEventListener('blur', (e) => {
+            formatNumberInput(e.target, 59);
         });
     });
 }

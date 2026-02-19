@@ -203,6 +203,58 @@ input[type="checkbox"] {
     accent-color: var(--success-color);
 }
 
+/* Time input wrapper and components */
+.time-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 110px;
+}
+
+.hour-input,
+.minute-input {
+    padding: 8px 6px;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    width: 40px;
+    transition: border-color 0.3s ease;
+    background: var(--card-bg);
+    color: var(--text-color);
+    text-align: center;
+}
+
+.hour-input:focus,
+.minute-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+.hour-input:disabled,
+.minute-input:disabled {
+    background: #2d3748;
+    cursor: not-allowed;
+}
+
+.time-separator {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--text-color);
+    user-select: none;
+}
+
+/* Remove number input spinners */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type="number"] {
+    -moz-appearance: textfield;
+}
+
 input[type="time"] {
     padding: 8px 12px;
     border: 2px solid var(--border-color);
@@ -306,6 +358,22 @@ input[type="time"]:disabled {
 
 .diff-neutral {
     color: var(--text-secondary);
+}
+
+/* Lunch break warning */
+.lunch-warning-row {
+    background: rgba(237, 137, 54, 0.1) !important;
+}
+
+.lunch-warning {
+    padding: 8px 12px;
+    background: var(--warning-color);
+    color: white;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-align: center;
+    margin: 4px 0;
 }
 
 .summary {
@@ -461,6 +529,17 @@ input[type="time"]:disabled {
 
 .default-day-wrapper {
     overflow-x: auto;
+}
+
+.default-day-actions {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+}
+
+.btn-success.saved {
+    background: var(--success-color);
+    opacity: 0.8;
 }
 
 .default-table {
