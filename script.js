@@ -37,7 +37,10 @@ function createTableRow(day, index) {
         <td><input type="time" class="entry1" data-index="${index}"></td>
         <td><input type="time" class="exit1" data-index="${index}"></td>
         <td><input type="time" class="entry2" data-index="${index}"></td>
-        <td><input type="time" class="exit2" data-index="${index}"></td>
+        <td class="exit2-cell">
+            <input type="time" class="exit2" data-index="${index}">
+            <span class="exit2-tooltip" data-index="${index}"></span>
+        </td>
         <td class="permit-cell">
             <button class="btn btn-secondary remove-permit" data-index="${index}">-</button>
             <button class="btn btn-primary add-permit" data-index="${index}">+</button>
@@ -54,20 +57,28 @@ function attachEventListeners() {
     // Clear button
     document.getElementById('clearButton').addEventListener('click', clearStorage);
     
-    // All inputs that should trigger save and recalculation
-    document.querySelectorAll('input[type="time"], input[type="checkbox"]').forEach(input => {
+    // SmartWorking checkboxes - dedicated listener
+    document.querySelectorAll('.smartworking-check').forEach(checkbox => {
+        checkbox.addEventListener('change', () => {
+            const index = parseInt(checkbox.dataset.index);
+            handleSmartWorkingChange(index, checkbox.checked);
+            saveToStorage();
+            updateAllCalculations();
+        });
+    });
+    
+    // Time inputs
+    document.querySelectorAll('input[type="time"]').forEach(input => {
         input.addEventListener('change', () => {
             saveToStorage();
             updateAllCalculations();
         });
         
         // For time inputs, also listen to input event for real-time placeholder update
-        if (input.type === 'time') {
-            input.addEventListener('input', () => {
-                const index = parseInt(input.dataset.index);
-                updateExit2Placeholder(index);
-            });
-        }
+        input.addEventListener('input', () => {
+            const index = parseInt(input.dataset.index);
+            updateExit2Placeholder(index);
+        });
     });
     
     // Permit buttons
@@ -84,6 +95,34 @@ function attachEventListeners() {
             removePermitMinutes(index);
         });
     });
+}
+
+// Handle SmartWorking checkbox change
+function handleSmartWorkingChange(index, isChecked) {
+    const entry1Input = document.querySelector(`.entry1[data-index="${index}"]`);
+    const exit1Input = document.querySelector(`.exit1[data-index="${index}"]`);
+    const entry2Input = document.querySelector(`.entry2[data-index="${index}"]`);
+    const exit2Input = document.querySelector(`.exit2[data-index="${index}"]`);
+    
+    if (isChecked) {
+        // Clear all time fields
+        entry1Input.value = '';
+        exit1Input.value = '';
+        entry2Input.value = '';
+        exit2Input.value = '';
+        
+        // Disable all time fields
+        entry1Input.disabled = true;
+        exit1Input.disabled = true;
+        entry2Input.disabled = true;
+        exit2Input.disabled = true;
+    } else {
+        // Re-enable all time fields
+        entry1Input.disabled = false;
+        exit1Input.disabled = false;
+        entry2Input.disabled = false;
+        exit2Input.disabled = false;
+    }
 }
 
 // Add permit minutes (30 min step)
@@ -236,15 +275,23 @@ function updateExit2Placeholder(index) {
     const data = getStoredData();
     const dayData = data[index] || {};
     const exit2Input = document.querySelector(`.exit2[data-index="${index}"]`);
+    const exit2Tooltip = document.querySelector(`.exit2-tooltip[data-index="${index}"]`);
     
     // Only suggest if entry1, exit1, entry2 are filled but exit2 is not
     if (dayData.entry1 && dayData.exit1 && dayData.entry2 && !dayData.exit2) {
         const suggestedTime = calculateSuggestedExit2(index);
         if (suggestedTime) {
             exit2Input.placeholder = suggestedTime;
+            exit2Tooltip.textContent = `💡 ${suggestedTime}`;
+            exit2Tooltip.classList.add('visible');
+        } else {
+            exit2Tooltip.textContent = '';
+            exit2Tooltip.classList.remove('visible');
         }
     } else {
         exit2Input.placeholder = '';
+        exit2Tooltip.textContent = '';
+        exit2Tooltip.classList.remove('visible');
     }
 }
 
@@ -387,6 +434,8 @@ function loadFromStorage() {
         
         if (dayData.smartworking !== undefined) {
             document.querySelector(`.smartworking-check[data-index="${index}"]`).checked = dayData.smartworking;
+            // Apply SmartWorking state (disable/enable fields)
+            handleSmartWorkingChange(index, dayData.smartworking);
         }
         if (dayData.entry1) {
             document.querySelector(`.entry1[data-index="${index}"]`).value = dayData.entry1;
