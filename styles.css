@@ -220,8 +220,8 @@ input[type="time"]::-webkit-datetime-edit-ampm-field {
     display: none;
 }
 
+/* Remove native time picker styling */
 input[type="time"] {
-    /* Ensure pattern attribute forces 24h format */
     -webkit-appearance: textfield;
 }
 

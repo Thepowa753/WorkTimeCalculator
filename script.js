@@ -323,7 +323,7 @@ function updateExit2Placeholder(index) {
     const exit2Input = document.querySelector(`.exit2[data-index="${index}"]`);
     const exit2Tooltip = document.querySelector(`.exit2-tooltip[data-index="${index}"]`);
     
-    // Check if elements exist
+    // Guard against missing elements during initialization or when elements are being updated
     if (!exit2Input || !exit2Tooltip) return;
     
     // Only suggest if entry1, exit1, entry2 are filled but exit2 is not
@@ -515,7 +515,7 @@ function loadFromStorage() {
 }
 
 function clearStorage() {
-    if (confirm('Sei sicuro di voler cancellare tutti i dati della settimana?')) {
+    if (confirm('Sei sicuro di voler cancellare tutti i dati della settimana? La giornata default verrà preservata.')) {
         // Clear week data only, not default day
         localStorage.removeItem(STORAGE_KEY);
         
