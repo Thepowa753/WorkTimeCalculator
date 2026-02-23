@@ -496,6 +496,19 @@ input[type="time"]:disabled {
     color: var(--text-secondary);
 }
 
+.week-span-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.week-span-icon {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin: 6px 0;
+}
+
 /* Mobile Responsive */
 @media (max-width: 768px) {
     body {
