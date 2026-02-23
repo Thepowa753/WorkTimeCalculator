@@ -484,6 +484,11 @@ function calculateRawDayDiff(index) {
         return 0;
     }
 
+    // If entry1 is set but exit1 is not, don't calculate (return 0)
+    if (entry1 && !exit1) {
+        return 0;
+    }
+
     // If entry2 is set but exit2 is not, don't calculate (return 0)
     if (entry2 && !exit2) {
         return 0;
