@@ -480,7 +480,8 @@ function calculateRawDayDiff(index) {
     const permit = dayData.permit || 0;
 
     // If no time data is entered at all, return 0 (don't count this day)
-    if (!entry1 && !exit1 && !entry2 && !exit2 && permit === 0) {
+    // Also return 0 if only a permit is set with no time entries (avoid negative scarto)
+    if (!entry1 && !exit1 && !entry2 && !exit2) {
         return 0;
     }
 
