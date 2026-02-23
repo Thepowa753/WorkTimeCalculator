@@ -78,6 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
     attachImportListeners();
     updateAllCalculations();
     autoFillFromJobTimePage();
+    checkWeekMonthSpan();
     if (document.getElementById('saveDefaultButton')) {
         loadDefaultDay();
         attachDefaultDayListeners();
@@ -1406,6 +1407,56 @@ function attachImportListeners() {
     const importButton = document.getElementById('importButton');
     if (!importButton) return;
     importButton.addEventListener('click', importFromJobHour);
+}
+
+// Check if the current week spans two calendar months by inspecting lblDay spans on the active tab
+function checkWeekMonthSpan() {
+    if (!chrome || !chrome.tabs || !chrome.scripting) return;
+
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (!tabs || !tabs[0]) return;
+        let parsedUrl;
+        try {
+            parsedUrl = new URL(tabs[0].url || '');
+        } catch (_) {
+            return;
+        }
+        if (parsedUrl.hostname !== 'webapps-sgs.sms-group.com' ||
+            !parsedUrl.pathname.toLowerCase().includes('/jobtime/compilazione.aspx')) return;
+
+        chrome.scripting.executeScript({
+            target: { tabId: tabs[0].id },
+            func: () => {
+                const CROSS_MONTH_PATTERNS = ['MARTEDÌ 01', 'MERCOLEDÌ 01', 'GIOVEDÌ 01', 'VENERDÌ 01'];
+                const lblDaySpans = Array.from(document.querySelectorAll('span.lblDay'));
+                return lblDaySpans.some(span =>
+                    CROSS_MONTH_PATTERNS.some(pattern => span.textContent.includes(pattern))
+                );
+            }
+        }, (results) => {
+            if (chrome.runtime.lastError || !results || !results[0]) return;
+            updateWeekSpanCard(results[0].result);
+        });
+    });
+}
+
+// Update the week-span indicator card
+function updateWeekSpanCard(crossesMonth) {
+    const card = document.getElementById('weekSpanCard');
+    const icon = document.getElementById('weekSpanIcon');
+    const label = document.getElementById('weekSpanLabel');
+    if (!card || !icon || !label) return;
+
+    card.style.display = '';
+    if (crossesMonth) {
+        card.style.background = 'linear-gradient(135deg, #f56565, #c53030)';
+        icon.textContent = '✗';
+        label.textContent = 'Settimana a cavallo di due mesi.';
+    } else {
+        card.style.background = 'linear-gradient(135deg, #48bb78, #38a169)';
+        icon.textContent = '✓';
+        label.textContent = 'Scarto usabile tutta la settimana';
+    }
 }
 
 
