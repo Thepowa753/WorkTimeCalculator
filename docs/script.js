@@ -730,8 +730,8 @@ function calculateSuggestedExit2(index) {
     // Ensure exit2 is never before 16:30 (990 minutes from midnight)
     const cappedExit2TotalMin = Math.max(finalExit2TotalMin, MIN_EXIT2_TIME);
     
-    // Round down to 5-minute steps
-    const roundedExit2TotalMin = Math.floor(cappedExit2TotalMin / THRESHOLD) * THRESHOLD;
+    // Round to nearest 5-minute step (consistent with applyThreshold rounding)
+    const roundedExit2TotalMin = Math.round(cappedExit2TotalMin / THRESHOLD) * THRESHOLD;
     
     const exit2Hour = Math.floor(roundedExit2TotalMin / 60);
     const exit2Minute = roundedExit2TotalMin % 60;
@@ -771,8 +771,8 @@ function calculateSuggestedExit2FromEntry1Only(index) {
     // Ensure exit2 is never before 16:30
     const cappedExit2TotalMin = Math.max(finalExit2TotalMin, MIN_EXIT2_TIME);
 
-    // Round down to 5-minute steps
-    const roundedExit2TotalMin = Math.floor(cappedExit2TotalMin / THRESHOLD) * THRESHOLD;
+    // Round to nearest 5-minute step (consistent with applyThreshold rounding)
+    const roundedExit2TotalMin = Math.round(cappedExit2TotalMin / THRESHOLD) * THRESHOLD;
 
     const exit2Hour = Math.floor(roundedExit2TotalMin / 60);
     const exit2Minute = roundedExit2TotalMin % 60;
