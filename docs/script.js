@@ -6,6 +6,7 @@ const PERMIT_STEP = 30; // 30 minutes step for permits
 const MIN_LUNCH_BREAK = 60; // Minimum lunch break in minutes
 const MIN_ENTRY_TIME = '07:30'; // Minimum entry time (earlier doesn't count)
 const MAX_EXIT_TIME = '20:00'; // Maximum exit time (later doesn't count)
+const MIN_EXIT2_TIME = 16 * 60 + 30; // Minimum exit2 time in minutes (16:30)
 const STORAGE_KEY = 'workTimeData';
 const DEFAULT_DAY_KEY = 'defaultDayData';
 
@@ -647,10 +648,17 @@ function updateExit2Placeholder(index) {
     // Guard against missing elements during initialization or when elements are being updated
     if (!exit2HourInput || !exit2MinuteInput || !exit2Tooltip) return;
     
-    // Only suggest if entry1, exit1, entry2 are filled but exit2 is not (and user hasn't started typing exit2)
     const exit2BeingEdited = exit2HourInput.value || exit2MinuteInput.value;
-    if (dayData.entry1 && dayData.exit1 && dayData.entry2 && !dayData.exit2 && !exit2BeingEdited) {
-        const suggestedTime = calculateSuggestedExit2(index);
+
+    // Suggest if entry1, exit1, entry2 are filled but exit2 is not
+    const fullSuggestionMode = dayData.entry1 && dayData.exit1 && dayData.entry2 && !dayData.exit2 && !exit2BeingEdited;
+    // Suggest if only entry1 is filled (no exit1, entry2, exit2) - assume 1h lunch break
+    const entry1OnlyMode = dayData.entry1 && !dayData.exit1 && !dayData.entry2 && !dayData.exit2 && !exit2BeingEdited;
+
+    if (fullSuggestionMode || entry1OnlyMode) {
+        const suggestedTime = entry1OnlyMode
+            ? calculateSuggestedExit2FromEntry1Only(index)
+            : calculateSuggestedExit2(index);
         if (suggestedTime) {
             const [sugHour, sugMinute] = suggestedTime.split(':');
             exit2HourInput.placeholder = sugHour;
@@ -720,8 +728,7 @@ function calculateSuggestedExit2(index) {
     const finalExit2TotalMin = Math.min(exit2TotalMin, maxTotalMin);
     
     // Ensure exit2 is never before 16:30 (990 minutes from midnight)
-    const minExit2Time = 16 * 60 + 30; // 16:30 in minutes
-    const cappedExit2TotalMin = Math.max(finalExit2TotalMin, minExit2Time);
+    const cappedExit2TotalMin = Math.max(finalExit2TotalMin, MIN_EXIT2_TIME);
     
     // Round down to 5-minute steps
     const roundedExit2TotalMin = Math.floor(cappedExit2TotalMin / THRESHOLD) * THRESHOLD;
@@ -729,6 +736,47 @@ function calculateSuggestedExit2(index) {
     const exit2Hour = Math.floor(roundedExit2TotalMin / 60);
     const exit2Minute = roundedExit2TotalMin % 60;
     
+    return `${String(exit2Hour).padStart(2, '0')}:${String(exit2Minute).padStart(2, '0')}`;
+}
+
+// Calculate suggested exit2 time when only entry1 is known (assumes 1h lunch break)
+function calculateSuggestedExit2FromEntry1Only(index) {
+    const data = getStoredData();
+    const dayData = data[index] || {};
+
+    const entry1 = dayData.entry1;
+    const permit = dayData.permit || 0;
+
+    if (!entry1) return null;
+
+    // Calculate accumulated minutes from previous days only
+    let previousDaysDiff = 0;
+    for (let i = 0; i < index; i++) {
+        previousDaysDiff += calculateDayMinutes(i);
+    }
+
+    // exit2 = entry1 + STANDARD_HOURS + MIN_LUNCH_BREAK - previousDaysDiff - permit
+    const cappedEntry1 = capTime(entry1, MIN_ENTRY_TIME, MAX_EXIT_TIME, true);
+    const [entry1Hour, entry1Min] = cappedEntry1.split(':').map(Number);
+    const entry1TotalMin = entry1Hour * 60 + entry1Min;
+
+    const totalOfficeMinutes = STANDARD_HOURS + MIN_LUNCH_BREAK - previousDaysDiff - permit;
+    const exit2TotalMin = entry1TotalMin + Math.max(0, totalOfficeMinutes);
+
+    // Cap at MAX_EXIT_TIME
+    const [maxHour, maxMin] = MAX_EXIT_TIME.split(':').map(Number);
+    const maxTotalMin = maxHour * 60 + maxMin;
+    const finalExit2TotalMin = Math.min(exit2TotalMin, maxTotalMin);
+
+    // Ensure exit2 is never before 16:30
+    const cappedExit2TotalMin = Math.max(finalExit2TotalMin, MIN_EXIT2_TIME);
+
+    // Round down to 5-minute steps
+    const roundedExit2TotalMin = Math.floor(cappedExit2TotalMin / THRESHOLD) * THRESHOLD;
+
+    const exit2Hour = Math.floor(roundedExit2TotalMin / 60);
+    const exit2Minute = roundedExit2TotalMin % 60;
+
     return `${String(exit2Hour).padStart(2, '0')}:${String(exit2Minute).padStart(2, '0')}`;
 }
 
