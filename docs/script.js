@@ -1219,23 +1219,20 @@ function autoFillFromJobTimePage() {
 
                 // Extract ALL E/U stamps from a text block, returning {entries, exits}
                 function extractAllStamps(text) {
-                    const entries = [], exits = [];
+                    const stamps = [];
                     const capturedTimestampPositions = new Set();
-                    // Match every "E HH:MM[:SS]" or "U HH:MM[:SS]" occurrence
+                    // Match every "E HH:MM[:SS]" or "U HH:MM[:SS]" occurrence (ignore E/U type, use order)
                     const stampPattern = /\b([EU])\s+(\d{1,2}:\d{2})(?::\d{2})?\b/gi;
                     let m;
                     while ((m = stampPattern.exec(text)) !== null) {
-                        const type = m[1].toUpperCase();
                         const parts = m[2].split(':');
                         if (parts.length < 2 || !parts[0] || !parts[1]) continue;
                         const time = `${parts[0].padStart(2, '0')}:${parts[1]}`;
                         // Record position of the time portion so we skip it in the fallback pass
                         capturedTimestampPositions.add(m.index + m[0].indexOf(m[2]));
-                        if (type === 'E') entries.push(time);
-                        else if (type === 'U') exits.push(time);
+                        stamps.push(time);
                     }
-                    // Fallback: capture standalone HH:MM[:SS] times not already matched above
-                    // and treat them as additional exits (e.g. last exit rendered without U prefix).
+                    // Fallback: capture standalone HH:MM[:SS] times not already matched above, added positionally.
                     // Note: this runs only on .boxTimb elements which contain exclusively stamp records.
                     const timePattern = /\b(\d{1,2}:\d{2})(?::\d{2})?\b/g;
                     while ((m = timePattern.exec(text)) !== null) {
@@ -1246,9 +1243,9 @@ function autoFillFromJobTimePage() {
                         const minute = parseInt(parts[1], 10);
                         if (hour > 23 || minute > 59) continue;
                         const time = `${parts[0].padStart(2, '0')}:${parts[1]}`;
-                        exits.push(time);
+                        stamps.push(time);
                     }
-                    return { entries, exits };
+                    return stamps;
                 }
 
                 const allBoxes = Array.from(document.querySelectorAll('.boxTimb'));
@@ -1260,7 +1257,7 @@ function autoFillFromJobTimePage() {
                 // --- Primary strategy: day name is embedded in the .boxTimb text ---
                 let foundAnyDay = false;
                 let lastDayIdx = -1;
-                const dayAccum = {}; // dayIdx -> { entries: [], exits: [], noStamps: bool }
+                const dayAccum = {}; // dayIdx -> { stamps: [], noStamps: bool }
                 allBoxes.forEach(box => {
                     const text = box.textContent.trim();
                     const lower = text.toLowerCase();
@@ -1274,7 +1271,7 @@ function autoFillFromJobTimePage() {
                         return; // no day context yet
                     }
 
-                    if (!dayAccum[dayIdx]) dayAccum[dayIdx] = { entries: [], exits: [], noStamps: false };
+                    if (!dayAccum[dayIdx]) dayAccum[dayIdx] = { stamps: [], noStamps: false };
 
                     if (lower.includes('nessuna timbratura')) {
                         dayAccum[dayIdx].noStamps = true;
@@ -1282,24 +1279,23 @@ function autoFillFromJobTimePage() {
                         return;
                     }
 
-                    const { entries, exits } = extractAllStamps(text);
-                    dayAccum[dayIdx].entries.push(...entries);
-                    dayAccum[dayIdx].exits.push(...exits);
-                    console.log(`[WorkTimeCalculator] Day ${dayIdx} (${ITALIAN_DAYS[dayIdx]}): entries=${JSON.stringify(entries)}, exits=${JSON.stringify(exits)}`);
+                    const stamps = extractAllStamps(text);
+                    dayAccum[dayIdx].stamps.push(...stamps);
+                    console.log(`[WorkTimeCalculator] Day ${dayIdx} (${ITALIAN_DAYS[dayIdx]}): stamps=${JSON.stringify(stamps)}`);
                 });
 
                 // Finalize accumulated results
                 Object.keys(dayAccum).forEach(key => {
                     const idx = parseInt(key);
                     const accum = dayAccum[idx];
-                    if (accum.noStamps && accum.entries.length === 0 && accum.exits.length === 0) {
+                    if (accum.noStamps && accum.stamps.length === 0) {
                         result[idx] = { entry1: null, exit1: null, entry2: null, exit2: null };
                     } else {
                         result[idx] = {
-                            entry1: accum.entries[0] || null,
-                            entry2: accum.entries[1] || null,
-                            exit1: accum.exits[0] || null,
-                            exit2: accum.exits[1] || null
+                            entry1: accum.stamps[0] || null,
+                            exit1: accum.stamps[1] || null,
+                            entry2: accum.stamps[2] || null,
+                            exit2: accum.stamps[3] || null
                         };
                     }
                 });
@@ -1325,21 +1321,19 @@ function autoFillFromJobTimePage() {
                     });
                     console.log('[WorkTimeCalculator] Ancestor strategy: found', dayGroupMap.size, 'day groups');
                     dayGroupMap.forEach((boxes, dayIdx) => {
-                        const entries = [], exits = [];
+                        const stamps = [];
                         boxes.forEach(box => {
                             const text = box.textContent.trim();
                             if (text.toLowerCase().includes('nessuna timbratura')) return;
-                            const stamps = extractAllStamps(text);
-                            entries.push(...stamps.entries);
-                            exits.push(...stamps.exits);
+                            stamps.push(...extractAllStamps(text));
                         });
                         result[dayIdx] = {
-                            entry1: entries[0] || null,
-                            entry2: entries[1] || null,
-                            exit1: exits[0] || null,
-                            exit2: exits[1] || null
+                            entry1: stamps[0] || null,
+                            exit1: stamps[1] || null,
+                            entry2: stamps[2] || null,
+                            exit2: stamps[3] || null
                         };
-                        console.log(`[WorkTimeCalculator] Day ${dayIdx} (${ITALIAN_DAYS[dayIdx]}): entries=${JSON.stringify(entries)}, exits=${JSON.stringify(exits)}`);
+                        console.log(`[WorkTimeCalculator] Day ${dayIdx} (${ITALIAN_DAYS[dayIdx]}): stamps=${JSON.stringify(stamps)}`);
                     });
                 }
 
