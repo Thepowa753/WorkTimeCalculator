@@ -4,6 +4,8 @@ const STANDARD_HOURS = 8 * 60; // 8 hours in minutes
 const THRESHOLD = 5; // 5 minutes threshold
 const PERMIT_STEP = 30; // 30 minutes step for permits
 const MIN_LUNCH_BREAK = 60; // Minimum lunch break in minutes
+const FORGOTTEN_LUNCH_THRESHOLD = 6 * 60 + 5; // 6h05m: if entry1→exit1 exceeds this with no break, assume forgotten lunch
+const FORGOTTEN_LUNCH_DEDUCTION = 60; // 1 hour deducted when lunch break was forgotten
 const MIN_ENTRY_TIME = '07:30'; // Minimum entry time (earlier doesn't count)
 const MAX_EXIT_TIME = '20:00'; // Maximum exit time (later doesn't count)
 const MIN_EXIT2_TIME = 16 * 60 + 30; // Minimum exit2 time in minutes (16:30)
@@ -518,6 +520,15 @@ function calculateRawDayDiff(index) {
         if (actualBreak < MIN_LUNCH_BREAK) {
             // Deduct the difference between actual and minimum break
             totalMinutes -= (MIN_LUNCH_BREAK - actualBreak);
+        }
+    }
+
+    // If only entry1/exit1 are set (no break tracked) and the span exceeds 6h05m,
+    // assume the lunch break was forgotten and deduct 1 hour
+    if (entry1 && exit1 && !entry2 && !exit2) {
+        const span = calculateTimeDifference(entry1, exit1);
+        if (span > FORGOTTEN_LUNCH_THRESHOLD) {
+            totalMinutes -= FORGOTTEN_LUNCH_DEDUCTION;
         }
     }
 
