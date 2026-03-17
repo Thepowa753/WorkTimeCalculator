@@ -1,5 +1,7 @@
 // Constants
-const WORK_DAYS = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì'];
+// WORK_DAYS is evaluated once at load time. Since setLanguage() always calls
+// location.reload(), this value is always fresh for the current language.
+const WORK_DAYS = t('days');
 const STANDARD_HOURS = 8 * 60; // 8 hours in minutes
 const THRESHOLD = 5; // 5 minutes threshold
 const PERMIT_STEP = 30; // 30 minutes step for permits
@@ -75,6 +77,7 @@ function formatNumberInput(input, max) {
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', () => {
+    applyTranslations();
     initializeTable();
     loadFromStorage();
     attachEventListeners();
@@ -106,7 +109,7 @@ function createTableRow(day, index) {
     tr.innerHTML = `
         <td class="day-cell">
             ${day}
-            <button class="btn-clearday" data-index="${index}" title="Cancella giornata">🗑️</button>
+            <button class="btn-clearday" data-index="${index}" title="${t('clearDay.title')}">🗑️</button>
         </td>
         <td><input type="checkbox" class="smartworking-check" data-index="${index}"></td>
         <td>
@@ -157,6 +160,14 @@ function attachEventListeners() {
     
     // Export button
     document.getElementById('exportButton').addEventListener('click', exportToCSV);
+
+    // Language selector
+    const langSelect = document.getElementById('languageSelect');
+    if (langSelect) {
+        langSelect.addEventListener('change', (e) => {
+            setLanguage(e.target.value);
+        });
+    }
     
     // SmartWorking checkboxes - dedicated listener
     document.querySelectorAll('.smartworking-check').forEach(checkbox => {
@@ -280,9 +291,9 @@ function validateLunchBreak(index) {
     let warning = '';
     
     if (exit1Minutes < minLunchStart) {
-        warning = '⚠️ Uscita 1 prima delle 12:00';
+        warning = t('lunchWarning.earlyExit');
     } else if (entry2Minutes > maxLunchEnd) {
-        warning = '⚠️ Entrata 2 dopo le 14:30';
+        warning = t('lunchWarning.lateEntry');
     }
     
     if (warning) {
@@ -938,7 +949,7 @@ function loadFromStorage() {
 }
 
 function clearStorage() {
-    if (confirm('Sei sicuro di voler cancellare tutti i dati della settimana? La giornata default verrà preservata.')) {
+    if (confirm(t('clearDay.confirm'))) {
         // Clear week data only, not default day
         localStorage.removeItem(STORAGE_KEY);
         
@@ -974,7 +985,7 @@ function exportToCSV() {
     let csvContent = '';
     
     // Add header row
-    csvContent += 'Giorno,SmartWorking,Entrata 1,Uscita 1,Entrata 2,Uscita 2,Permesso,Scarto (HH:MM),Rubati\n';
+    csvContent += t('csv.header');
     
     // Add data rows
     WORK_DAYS.forEach((day, index) => {
@@ -988,7 +999,7 @@ function exportToCSV() {
         const rubatoFormatted = formatMinutesToHHMM(rubato);
         
         csvContent += `${day},`;
-        csvContent += `${dayData.smartworking ? 'Sì' : 'No'},`;
+        csvContent += `${dayData.smartworking ? t('csv.yes') : t('csv.no')},`;
         csvContent += `${dayData.entry1 || ''},`;
         csvContent += `${dayData.exit1 || ''},`;
         csvContent += `${dayData.entry2 || ''},`;
@@ -1007,7 +1018,7 @@ function exportToCSV() {
     const totalRubato = calculateTotalRubato();
     const totalRubatoFormatted = formatMinutesToHHMM(totalRubato);
     
-    csvContent += `TOTALE SCARTO,,,,,,,${totalFormatted},${totalRubatoFormatted}\n`;
+    csvContent += `${t('csv.total')},,,,,,,${totalFormatted},${totalRubatoFormatted}\n`;
     
     // Create blob and download link
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -1088,12 +1099,11 @@ function saveDefaultDay() {
     
     // Show save confirmation
     const saveButton = document.getElementById('saveDefaultButton');
-    const originalText = saveButton.textContent;
-    saveButton.textContent = '✅ Salvato!';
+    saveButton.textContent = t('defaultDay.saved');
     saveButton.classList.add('saved');
     
     setTimeout(() => {
-        saveButton.textContent = originalText;
+        saveButton.textContent = t('defaultDay.save');
         saveButton.classList.remove('saved');
     }, 2000);
 }
@@ -1430,7 +1440,7 @@ function importFromJobHour() {
     }
 
     if (parsedDays.length === 0) {
-        alert('Nessun dato valido trovato.\n\nFormati supportati:\n- Standard: E 07:25:06   U 12:22:07   E 13:10:00   U 16:32:48\n- Manuale: 07:25:06 | 12:22:07 | 13:10:00 (M) | 16:32:48');
+        alert(t('import.noData'));
         return;
     }
 
@@ -1456,7 +1466,7 @@ function importFromJobHour() {
 
     const importButton = document.getElementById('importButton');
     const originalText = importButton.textContent;
-    importButton.textContent = `✅ Importati ${count} giorni!`;
+    importButton.textContent = tpl('import.success', { count });
     setTimeout(() => {
         importButton.textContent = originalText;
     }, 2000);
@@ -1510,11 +1520,11 @@ function updateWeekSpanCard(crossesMonth) {
     if (crossesMonth) {
         card.style.background = 'linear-gradient(135deg, #f56565, #c53030)';
         icon.textContent = '✗';
-        label.textContent = 'Settimana a cavallo di due mesi.';
+        label.textContent = t('weekSpan.crosses');
     } else {
         card.style.background = 'linear-gradient(135deg, #48bb78, #38a169)';
         icon.textContent = '✓';
-        label.textContent = 'Scarto usabile tutta la settimana';
+        label.textContent = t('weekSpan.safe');
     }
 }
 

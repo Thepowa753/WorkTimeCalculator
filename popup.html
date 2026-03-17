@@ -128,6 +128,11 @@
         .default-day-actions {
             margin-top: 6px;
         }
+        .lang-select {
+            padding: 3px 6px;
+            font-size: 0.78rem;
+            border-radius: 6px;
+        }
     </style>
 </head>
 <body>
@@ -135,8 +140,12 @@
         <header>
             <h1>⏰ Work Time Calculator</h1>
             <div class="controls">
-                <button id="exportButton" class="btn btn-success">📊 Esporta CSV</button>
-                <button id="clearButton" class="btn btn-danger">🗑️ Pulisci Storage</button>
+                <button id="exportButton" class="btn btn-success" data-i18n="buttons.export">📊 Esporta CSV</button>
+                <button id="clearButton" class="btn btn-danger" data-i18n="buttons.clear">🗑️ Pulisci Storage</button>
+                <select id="languageSelect" class="lang-select" title="Language / Lingua">
+                    <option value="it">🇮🇹 IT</option>
+                    <option value="en">🇬🇧 EN</option>
+                </select>
             </div>
         </header>
 
@@ -145,15 +154,15 @@
             <table id="workTable">
                 <thead>
                     <tr>
-                        <th>Giorno</th>
-                        <th>Smart</th>
-                        <th>Entrata 1</th>
-                        <th>Uscita 1</th>
-                        <th>Entrata 2</th>
-                        <th>Uscita 2</th>
-                        <th>Permesso</th>
-                        <th>Scarto (HH:MM)</th>
-                        <th>Rubati</th>
+                        <th data-i18n="table.day">Giorno</th>
+                        <th data-i18n="table.smartShort">Smart</th>
+                        <th data-i18n="table.entry1">Entrata 1</th>
+                        <th data-i18n="table.exit1">Uscita 1</th>
+                        <th data-i18n="table.entry2">Entrata 2</th>
+                        <th data-i18n="table.exit2">Uscita 2</th>
+                        <th data-i18n="table.permit">Permesso</th>
+                        <th data-i18n="table.diff">Scarto (HH:MM)</th>
+                        <th data-i18n="table.stolen">Rubati</th>
                     </tr>
                 </thead>
                 <tbody id="workTableBody">
@@ -165,21 +174,22 @@
         <div class="summary">
             <div id="weekSpanCard" class="summary-card summary-card-small week-span-card" style="display:none;">
                 <div id="weekSpanIcon" class="week-span-icon">✗</div>
-                <p id="weekSpanLabel" class="total-label">Settimana a cavallo di due mesi.</p>
+                <p id="weekSpanLabel" class="total-label" data-i18n="weekSpan.crosses">Settimana a cavallo di due mesi.</p>
             </div>
             <div class="summary-card">
-                <h2>Totale Scarto</h2>
+                <h2 data-i18n="summary.totalDiff">Totale Scarto</h2>
                 <div id="totalMinutes" class="total-value">00:00</div>
-                <p class="total-label">ore di scarto (HH:MM)</p>
+                <p class="total-label" data-i18n="summary.diffLabel">ore di scarto (HH:MM)</p>
             </div>
             <div class="summary-card summary-card-small">
-                <h2>Totale Rubati</h2>
+                <h2 data-i18n="summary.totalStolen">Totale Rubati</h2>
                 <div id="totalRubato" class="total-value total-value-small">00:00</div>
-                <p class="total-label">min. rubati (HH:MM)</p>
+                <p class="total-label" data-i18n="summary.stolenLabel">min. rubati (HH:MM)</p>
             </div>
         </div>
     </div>
 
+    <script src="docs/i18n.js"></script>
     <script src="docs/script.js"></script>
 </body>
 </html>
