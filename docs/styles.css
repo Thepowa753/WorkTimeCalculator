@@ -606,6 +606,29 @@ input[type="time"]:disabled {
     }
 }
 
+/* Language Selector */
+.lang-select {
+    padding: 8px 12px;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--card-bg);
+    color: var(--text-color);
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: border-color 0.3s ease;
+    box-shadow: var(--shadow);
+}
+
+.lang-select:hover {
+    border-color: var(--primary-color);
+}
+
+.lang-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
 /* Import Section */
 .import-section {
     margin-top: 40px;
