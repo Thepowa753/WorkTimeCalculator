@@ -511,30 +511,26 @@ function calculateRawDayDiff(index) {
 
     let totalMinutes = 0;
 
-    // Calculate first time slot with time boundaries
+    // Pre-compute rounded times (entry down, exit up) for reuse
     // Entry times are rounded down (floor) and exit times are rounded up (ceil)
-    if (entry1 && exit1) {
-        const cappedEntry1 = capTime(entry1, MIN_ENTRY_TIME, MAX_EXIT_TIME, true);
-        const cappedExit1 = capTime(exit1, MIN_ENTRY_TIME, MAX_EXIT_TIME, false);
-        const roundedEntry1 = roundTimeStringDown(cappedEntry1);
-        const roundedExit1 = roundTimeStringUp(cappedExit1);
+    const roundedEntry1 = entry1 ? roundTimeStringDown(capTime(entry1, MIN_ENTRY_TIME, MAX_EXIT_TIME, true)) : null;
+    const roundedExit1 = exit1 ? roundTimeStringUp(capTime(exit1, MIN_ENTRY_TIME, MAX_EXIT_TIME, false)) : null;
+    const roundedEntry2 = entry2 ? roundTimeStringDown(capTime(entry2, MIN_ENTRY_TIME, MAX_EXIT_TIME, true)) : null;
+    const roundedExit2 = exit2 ? roundTimeStringUp(capTime(exit2, MIN_ENTRY_TIME, MAX_EXIT_TIME, false)) : null;
+
+    // Calculate first time slot
+    if (roundedEntry1 && roundedExit1) {
         totalMinutes += calculateTimeDifference(roundedEntry1, roundedExit1);
     }
 
     // Calculate second time slot only if both entry2 and exit2 are present
-    if (entry2 && exit2) {
-        const cappedEntry2 = capTime(entry2, MIN_ENTRY_TIME, MAX_EXIT_TIME, true);
-        const cappedExit2 = capTime(exit2, MIN_ENTRY_TIME, MAX_EXIT_TIME, false);
-        const roundedEntry2 = roundTimeStringDown(cappedEntry2);
-        const roundedExit2 = roundTimeStringUp(cappedExit2);
+    if (roundedEntry2 && roundedExit2) {
         totalMinutes += calculateTimeDifference(roundedEntry2, roundedExit2);
     }
 
     // Apply minimum lunch break rule (exit1 to entry2), using rounded times
-    if (exit1 && entry2) {
-        const roundedBreakExit1 = roundTimeStringUp(exit1);
-        const roundedBreakEntry2 = roundTimeStringDown(entry2);
-        const actualBreak = calculateTimeDifference(roundedBreakExit1, roundedBreakEntry2);
+    if (roundedExit1 && roundedEntry2) {
+        const actualBreak = calculateTimeDifference(roundedExit1, roundedEntry2);
         if (actualBreak < MIN_LUNCH_BREAK) {
             // Deduct the difference between actual and minimum break
             totalMinutes -= (MIN_LUNCH_BREAK - actualBreak);
@@ -543,8 +539,8 @@ function calculateRawDayDiff(index) {
 
     // If only entry1/exit1 are set (no break tracked) and the span exceeds 6h05m,
     // assume the lunch break was forgotten and deduct 1 hour
-    if (entry1 && exit1 && !entry2 && !exit2) {
-        const span = calculateTimeDifference(roundTimeStringDown(entry1), roundTimeStringUp(exit1));
+    if (roundedEntry1 && roundedExit1 && !entry2 && !exit2) {
+        const span = calculateTimeDifference(roundedEntry1, roundedExit1);
         if (span > FORGOTTEN_LUNCH_THRESHOLD) {
             totalMinutes -= FORGOTTEN_LUNCH_DEDUCTION;
         }
