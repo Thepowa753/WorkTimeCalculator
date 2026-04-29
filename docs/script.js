@@ -511,23 +511,26 @@ function calculateRawDayDiff(index) {
 
     let totalMinutes = 0;
 
-    // Calculate first time slot with time boundaries
-    if (entry1 && exit1) {
-        const cappedEntry1 = capTime(entry1, MIN_ENTRY_TIME, MAX_EXIT_TIME, true);
-        const cappedExit1 = capTime(exit1, MIN_ENTRY_TIME, MAX_EXIT_TIME, false);
-        totalMinutes += calculateTimeDifference(cappedEntry1, cappedExit1);
+    // Pre-compute rounded times (entry down, exit up) for reuse
+    // Entry times are rounded down (floor) and exit times are rounded up (ceil)
+    const roundedEntry1 = entry1 ? roundTimeStringDown(capTime(entry1, MIN_ENTRY_TIME, MAX_EXIT_TIME, true)) : null;
+    const roundedExit1 = exit1 ? roundTimeStringUp(capTime(exit1, MIN_ENTRY_TIME, MAX_EXIT_TIME, false)) : null;
+    const roundedEntry2 = entry2 ? roundTimeStringDown(capTime(entry2, MIN_ENTRY_TIME, MAX_EXIT_TIME, true)) : null;
+    const roundedExit2 = exit2 ? roundTimeStringUp(capTime(exit2, MIN_ENTRY_TIME, MAX_EXIT_TIME, false)) : null;
+
+    // Calculate first time slot
+    if (roundedEntry1 && roundedExit1) {
+        totalMinutes += calculateTimeDifference(roundedEntry1, roundedExit1);
     }
 
     // Calculate second time slot only if both entry2 and exit2 are present
-    if (entry2 && exit2) {
-        const cappedEntry2 = capTime(entry2, MIN_ENTRY_TIME, MAX_EXIT_TIME, true);
-        const cappedExit2 = capTime(exit2, MIN_ENTRY_TIME, MAX_EXIT_TIME, false);
-        totalMinutes += calculateTimeDifference(cappedEntry2, cappedExit2);
+    if (roundedEntry2 && roundedExit2) {
+        totalMinutes += calculateTimeDifference(roundedEntry2, roundedExit2);
     }
 
-    // Apply minimum lunch break rule (exit1 to entry2)
-    if (exit1 && entry2) {
-        const actualBreak = calculateTimeDifference(exit1, entry2);
+    // Apply minimum lunch break rule (exit1 to entry2), using rounded times
+    if (roundedExit1 && roundedEntry2) {
+        const actualBreak = calculateTimeDifference(roundedExit1, roundedEntry2);
         if (actualBreak < MIN_LUNCH_BREAK) {
             // Deduct the difference between actual and minimum break
             totalMinutes -= (MIN_LUNCH_BREAK - actualBreak);
@@ -536,8 +539,8 @@ function calculateRawDayDiff(index) {
 
     // If only entry1/exit1 are set (no break tracked) and the span exceeds 6h05m,
     // assume the lunch break was forgotten and deduct 1 hour
-    if (entry1 && exit1 && !entry2 && !exit2) {
-        const span = calculateTimeDifference(entry1, exit1);
+    if (roundedEntry1 && roundedExit1 && !entry2 && !exit2) {
+        const span = calculateTimeDifference(roundedEntry1, roundedExit1);
         if (span > FORGOTTEN_LUNCH_THRESHOLD) {
             totalMinutes -= FORGOTTEN_LUNCH_DEDUCTION;
         }
@@ -575,18 +578,14 @@ function calculateRubatoMinutes(index) {
         return 0;
     }
 
-    // For entry times: system rounds UP to next 5-min mark (stolen = minutes until next multiple of 5)
+    // For entry times: system rounds DOWN to previous 5-min mark (no time stolen)
     function entryStolen(time) {
-        if (!time) return 0;
-        const [h, m] = time.split(':').map(Number);
-        return (THRESHOLD - ((h * 60 + m) % THRESHOLD)) % THRESHOLD;
+        return 0;
     }
 
-    // For exit times: system rounds DOWN to previous 5-min mark (stolen = remainder after dividing by 5)
+    // For exit times: system rounds UP to next 5-min mark (no time stolen)
     function exitStolen(time) {
-        if (!time) return 0;
-        const [h, m] = time.split(':').map(Number);
-        return (h * 60 + m) % THRESHOLD;
+        return 0;
     }
 
     let totalRubato = 0;
@@ -643,6 +642,24 @@ function capTime(time, minTime, maxTime, isEntry) {
         // Exit times before min time are not capped - they're just before work hours
         return time;
     }
+}
+
+// Round a time string down to the previous multiple of THRESHOLD minutes
+function roundTimeStringDown(time) {
+    if (!time) return time;
+    const [h, m] = time.split(':').map(Number);
+    const totalMin = h * 60 + m;
+    const rounded = Math.floor(totalMin / THRESHOLD) * THRESHOLD;
+    return `${String(Math.floor(rounded / 60)).padStart(2, '0')}:${String(rounded % 60).padStart(2, '0')}`;
+}
+
+// Round a time string up to the next multiple of THRESHOLD minutes
+function roundTimeStringUp(time) {
+    if (!time) return time;
+    const [h, m] = time.split(':').map(Number);
+    const totalMin = h * 60 + m;
+    const rounded = Math.ceil(totalMin / THRESHOLD) * THRESHOLD;
+    return `${String(Math.floor(rounded / 60)).padStart(2, '0')}:${String(rounded % 60).padStart(2, '0')}`;
 }
 
 // Apply threshold rounding (5 minutes)
@@ -752,8 +769,8 @@ function calculateSuggestedExit2(index) {
     // Ensure exit2 is never before 16:30 (990 minutes from midnight)
     const cappedExit2TotalMin = Math.max(finalExit2TotalMin, MIN_EXIT2_TIME);
     
-    // Round to nearest 5-minute step (consistent with applyThreshold rounding)
-    const roundedExit2TotalMin = Math.round(cappedExit2TotalMin / THRESHOLD) * THRESHOLD;
+    // Round exit2 UP to the next 5-minute step (exit times round up)
+    const roundedExit2TotalMin = Math.ceil(cappedExit2TotalMin / THRESHOLD) * THRESHOLD;
     
     const exit2Hour = Math.floor(roundedExit2TotalMin / 60);
     const exit2Minute = roundedExit2TotalMin % 60;
@@ -793,8 +810,8 @@ function calculateSuggestedExit2FromEntry1Only(index) {
     // Ensure exit2 is never before 16:30
     const cappedExit2TotalMin = Math.max(finalExit2TotalMin, MIN_EXIT2_TIME);
 
-    // Round to nearest 5-minute step (consistent with applyThreshold rounding)
-    const roundedExit2TotalMin = Math.round(cappedExit2TotalMin / THRESHOLD) * THRESHOLD;
+    // Round exit2 UP to the next 5-minute step (exit times round up)
+    const roundedExit2TotalMin = Math.ceil(cappedExit2TotalMin / THRESHOLD) * THRESHOLD;
 
     const exit2Hour = Math.floor(roundedExit2TotalMin / 60);
     const exit2Minute = roundedExit2TotalMin % 60;
